@@ -1,0 +1,13 @@
+# PR1 inputs and generated app bundles must not be committed.
+/original/
+/patched/
+*.app/
+*.framework/
+
+# Generated output.
+__pycache__/
+*.pyc
+*.log
+*.tar
+*.tar.gz
+*.zip
