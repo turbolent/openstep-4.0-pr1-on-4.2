@@ -11,7 +11,8 @@ cc -fno-common -dynamiclib -undefined suppress \
     -Wl,-install_name,"$bundle/DR2Compat.dylib",-compatibility_version,1.0,-current_version,1.0 \
     -o "$bundle/DR2Compat.dylib.new" \
     "$bundle/Compatibility/abi.m" "$bundle/Compatibility/compat.m" \
-    "$bundle/Compatibility/undo.m" -framework AppKit -framework Foundation
+    "$bundle/Compatibility/undo.m" "$bundle/Compatibility/common/dr2-appkit.m" \
+    "$bundle/Compatibility/common/dr2-paths.m" -framework AppKit -framework Foundation
 mv "$bundle/DR2Compat.dylib.new" "$bundle/DR2Compat.dylib"
 chmod 755 "$bundle/MailViewerDR2"
 echo "Built $bundle"

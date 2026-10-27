@@ -1,83 +1,26 @@
 """Prepare DR2 MailViewer and its compatibility sources for OPENSTEP 4.2 Intel."""
 
 import argparse
-import gzip
-import io
-import shutil
 import struct
 import tarfile
-import tempfile
 from pathlib import Path
 
-from tools.common import EXECUTABLE_MODE, FILE_MODE, require
-
-from .prepare import APP_NAME, BUNDLE_NAME, inputs, install_path, prepare_bundle
-
-NATIVE_SOURCES = ("abi.m", "compat.m", "undo.m", "build-on-openstep.sh")
-
-
-def package(bundle, archive):
-    with archive.open("wb") as raw:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as compressed:
-            with tarfile.open(
-                fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT
-            ) as tar:
-                for path in sorted(bundle.rglob("*")):
-                    if not path.is_file():
-                        continue
-                    name = path.relative_to(bundle).as_posix()
-                    info = tarfile.TarInfo(name)
-                    data = path.read_bytes()
-                    info.size = len(data)
-                    info.mode = EXECUTABLE_MODE if name == APP_NAME else FILE_MODE
-                    tar.addfile(info, io.BytesIO(data))
+from tools.common.build_dr2 import build_bundle
+from .prepare import APP_NAME, inputs, install_path, prepare_bundle
 
 
 def build(source, frameworks, output, archive, destination):
-    destination = install_path(destination)
-    sources = inputs(source, frameworks)
-    output, archive = Path(output).absolute(), Path(archive).absolute()
-    for target in (output, archive):
-        require(
-            not target.exists() and not target.is_symlink(),
-            "Output already exists: " + str(target),
-        )
-    output, archive = output.resolve(), archive.resolve()
-    require(output.name == BUNDLE_NAME, "Output must be named " + BUNDLE_NAME + ".")
-    require(
-        output not in archive.parents and archive != output,
-        "Archive must be outside the app.",
+    directory = Path(__file__).parent
+    native = {name: directory / name for name in (
+        "abi.m", "compat.m", "undo.m", "build-on-openstep.sh",
+    )}
+    for name in ("dr2-appkit.m", "dr2-paths.m"):
+        native["common/" + name] = directory.parent / "common" / name
+    return build_bundle(
+        sources=inputs(source, frameworks), input_roots=(source, frameworks),
+        output=output, archive=archive, destination=destination, app_name=APP_NAME,
+        prepare=prepare_bundle, native_sources=native,
     )
-    for root in (Path(source).resolve(), Path(frameworks).resolve()):
-        for target in (output, archive):
-            require(
-                root != target
-                and root not in target.parents
-                and target not in root.parents,
-                "Outputs must be separate from stock inputs.",
-            )
-    output.parent.mkdir(parents=True, exist_ok=True)
-    archive.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix=".mailviewer-dr2-", dir=output.parent
-    ) as staging:
-        app = prepare_bundle(sources, Path(staging) / BUNDLE_NAME, destination)
-        native = app / "Compatibility"
-        native.mkdir()
-        for name in NATIVE_SOURCES:
-            shutil.copyfile(Path(__file__).parent / name, native / name)
-        # The native compiler checks this path before creating the dylib.
-        (native / "install-path").write_text(
-            destination + "\n", encoding="ascii", newline="\n"
-        )
-        with tempfile.TemporaryDirectory(
-            prefix=".mailviewer-dr2-", dir=archive.parent
-        ) as packed:
-            temporary_archive = Path(packed) / "app.tar.gz"
-            package(app, temporary_archive)
-            app.rename(output)
-            temporary_archive.rename(archive)
-    return output, archive
 
 
 def main():
