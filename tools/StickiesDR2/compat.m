@@ -10,8 +10,7 @@ static void ready(id receiver, SEL selector, id notification) {
     NSString *library = [NSHomeDirectory() stringByAppendingPathComponent:@"Library"];
     NSMenu *menu;
     id infoItem;
-    if (![files fileExistsAtPath:library] &&
-        ![files createDirectoryAtPath:library attributes:nil])
+    if (![files fileExistsAtPath:library] && ![files createDirectoryAtPath:library attributes:nil])
         [NSException raise:NSInvalidArgumentException
                     format:@"Cannot create the notes directory: %@", library];
     DR2FixSubmenus();
@@ -30,8 +29,7 @@ static void ready(id receiver, SEL selector, id notification) {
 }
 
 void NSShowSystemInfoPanel(void) {
-    NSRunAlertPanel(@"Stickies DR2", @"Rhapsody DR2 Stickies on OPENSTEP 4.2",
-                   @"OK", nil, nil);
+    NSRunAlertPanel(@"Stickies DR2", @"Rhapsody DR2 Stickies on OPENSTEP 4.2", @"OK", nil, nil);
 }
 
 @interface StickiesRuntime : NSObject

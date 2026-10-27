@@ -5,7 +5,8 @@ int main(int argc, char **argv) {
     NSAutoreleasePool *pool;
     NSData *data;
     BOOL saved;
-    if (argc != 2) return 2;
+    if (argc != 2)
+        return 2;
     pool = [[NSAutoreleasePool alloc] init];
     data = [NSSerializer serializePropertyList:[NSDictionary dictionary]];
     saved = [data writeToFile:[NSString stringWithCString:argv[1]] atomically:YES];

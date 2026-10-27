@@ -6,7 +6,8 @@
 @interface NSViewBubbleHelper : NSObject
 @end
 @implementation NSViewBubbleHelper (PR142Compatibility)
-+ (void)displayHelpText { }
++ (void)displayHelpText {
+}
 @end
 
 #include "../common/viewer.m"

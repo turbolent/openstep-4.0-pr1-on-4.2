@@ -27,6 +27,5 @@ static void mailReady(id receiver, SEL selector, id notification) {
 
 NSString *NSLinkAttributeName = @"NSLink";
 void NSShowSystemInfoPanel(void) {
-    NSRunAlertPanel(@"MailViewer DR2", @"Rhapsody DR2 MailViewer on OPENSTEP 4.2",
-                    @"OK", nil, nil);
+    NSRunAlertPanel(@"MailViewer DR2", @"Rhapsody DR2 MailViewer on OPENSTEP 4.2", @"OK", nil, nil);
 }

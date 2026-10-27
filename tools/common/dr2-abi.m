@@ -24,7 +24,12 @@ id _NSExceptionObjectFromHandler2(NSHandler *handler) {
     return _NSExceptionObjectFromHandler(handler);
 }
 
-enum { DR2RuneCount = 256, DR2FileSize = 88, DR2FileEOF = 0x20, DR2FileError = 0x40 };
+enum {
+    DR2RuneCount = 256,
+    DR2FileSize = 88,
+    DR2FileEOF = 0x20,
+    DR2FileError = 0x40
+};
 enum {
     DR2RuneAlpha = 0x100,
     DR2RuneControl = 0x200,
@@ -224,7 +229,8 @@ void DR2InitializeCABI(void) {
 
 int DR2fflush(DR2File *file) {
     int result = fflush(file ? nativeFile(file) : NULL);
-    if (file) updateFile(file);
+    if (file)
+        updateFile(file);
     return result;
 }
 char *DR2fgets(char *buffer, int size, DR2File *file) {
@@ -235,7 +241,8 @@ char *DR2fgets(char *buffer, int size, DR2File *file) {
 int DR2lstat(const char *path, struct DR2Stat *out) {
     struct stat native;
     int result = lstat(path, &native);
-    if (!result) convertStat(out, &native);
+    if (!result)
+        convertStat(out, &native);
     return result;
 }
 struct DR2Dirent {
@@ -247,7 +254,8 @@ struct DR2Dirent {
 struct DR2Dirent *DR2readdir(DIR *dir) {
     static struct DR2Dirent result;
     struct direct *entry = readdir(dir);
-    if (!entry) return NULL;
+    if (!entry)
+        return NULL;
     result.inode = entry->d_fileno;
     result.reclen = sizeof(result);
     result.type = 0;
@@ -266,7 +274,8 @@ struct DR2StatFS {
 int DR2statfs(const char *path, struct DR2StatFS *out) {
     struct statfs native;
     int result = statfs(path, &native);
-    if (result) return result;
+    if (result)
+        return result;
     memset(out, 0, sizeof(*out));
     out->type = native.f_type;
     out->bsize = out->iosize = native.f_bsize;
@@ -282,35 +291,52 @@ long long strtoq(const char *text, char **end, int base) {
     const char *p = text;
     unsigned long long value = 0, limit = 0x7fffffffffffffffULL;
     int negative = 0, digit, any = 0, overflow = 0;
-    while (isspace((unsigned char)*p)) p++;
-    if (*p == '-' || *p == '+') negative = *p++ == '-';
+    while (isspace((unsigned char)*p))
+        p++;
+    if (*p == '-' || *p == '+')
+        negative = *p++ == '-';
     if (base && (base < 2 || base > 36)) {
         errno = EINVAL;
-        if (end) *end = (char *)text;
+        if (end)
+            *end = (char *)text;
         return 0;
     }
-    if ((base == 0 || base == 16) && p[0] == '0' && (p[1] == 'x' || p[1] == 'X') && isxdigit((unsigned char)p[2])) {
-        base = 16; p += 2;
+    if ((base == 0 || base == 16) && p[0] == '0' && (p[1] == 'x' || p[1] == 'X') &&
+        isxdigit((unsigned char)p[2])) {
+        base = 16;
+        p += 2;
     }
-    if (!base) base = *p == '0' ? 8 : 10;
-    if (negative) limit++;
+    if (!base)
+        base = *p == '0' ? 8 : 10;
+    if (negative)
+        limit++;
     for (;; p++) {
         unsigned char c = *p;
-        digit = c >= '0' && c <= '9' ? c - '0' :
-                c >= 'a' && c <= 'z' ? c - 'a' + 10 :
-                c >= 'A' && c <= 'Z' ? c - 'A' + 10 : 36;
-        if (digit >= base) break;
+        digit = c >= '0' && c <= '9'   ? c - '0'
+                : c >= 'a' && c <= 'z' ? c - 'a' + 10
+                : c >= 'A' && c <= 'Z' ? c - 'A' + 10
+                                       : 36;
+        if (digit >= base)
+            break;
         any = 1;
-        if (value > (limit - digit) / base) overflow = 1;
-        else value = value * base + digit;
+        if (value > (limit - digit) / base)
+            overflow = 1;
+        else
+            value = value * base + digit;
     }
-    if (end) *end = (char *)(any ? p : text);
-    if (overflow) { errno = ERANGE; value = limit; }
+    if (end)
+        *end = (char *)(any ? p : text);
+    if (overflow) {
+        errno = ERANGE;
+        value = limit;
+    }
     return negative ? (long long)(0ULL - value) : (long long)value;
 }
 
 @interface DR2CRuntime : NSObject
 @end
 @implementation DR2CRuntime
-+ (void)load { DR2InitializeCABI(); }
++ (void)load {
+    DR2InitializeCABI();
+}
 @end

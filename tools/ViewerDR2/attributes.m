@@ -31,12 +31,24 @@ static struct stat *nativeAttributes(id object) {
     native.st_blksize = value->blocksize;
     return [self attributesWithStat:&native];
 }
-- (unsigned)dr2_getStatDev { return (unsigned short)nativeAttributes(self)->st_dev; }
-- (unsigned)dr2_getUID { return (unsigned short)nativeAttributes(self)->st_uid; }
-- (unsigned)dr2_getGID { return (unsigned short)nativeAttributes(self)->st_gid; }
-- (unsigned)dr2_getINode { return nativeAttributes(self)->st_ino; }
-- (long)dr2_getLastChangeTime { return nativeAttributes(self)->st_ctime; }
-- (long)dr2_mtime { return nativeAttributes(self)->st_mtime; }
+- (unsigned)dr2_getStatDev {
+    return (unsigned short)nativeAttributes(self)->st_dev;
+}
+- (unsigned)dr2_getUID {
+    return (unsigned short)nativeAttributes(self)->st_uid;
+}
+- (unsigned)dr2_getGID {
+    return (unsigned short)nativeAttributes(self)->st_gid;
+}
+- (unsigned)dr2_getINode {
+    return nativeAttributes(self)->st_ino;
+}
+- (long)dr2_getLastChangeTime {
+    return nativeAttributes(self)->st_ctime;
+}
+- (long)dr2_mtime {
+    return nativeAttributes(self)->st_mtime;
+}
 - (NSDate *)dr2fileChangeDate {
     return [NSDate dateWithTimeIntervalSince1970:nativeAttributes(self)->st_ctime];
 }
@@ -57,18 +69,19 @@ static struct stat *nativeAttributes(id object) {
  * library. Install these adapters once Viewer has finished loading. */
 void DR2InitializeFileAttributes(void) {
     const char *names[] = {
-        "_getStatDev", "_getUID", "_getGID", "_getINode", "_getLastChangeTime",
-        "_mtime", "fileChangeDate", "areEqualUID:", "isSameDevice:", "buildDirFileUID:"
-    };
+        "_getStatDev", "_getUID",        "_getGID",      "_getINode",     "_getLastChangeTime",
+        "_mtime",      "fileChangeDate", "areEqualUID:", "isSameDevice:", "buildDirFileUID:"};
     const char *adapters[] = {
-        "dr2_getStatDev", "dr2_getUID", "dr2_getGID", "dr2_getINode",
-        "dr2_getLastChangeTime", "dr2_mtime", "dr2fileChangeDate",
-        "dr2areEqualUID:", "dr2isSameDevice:", "dr2buildDirFileUID:"
-    };
+        "dr2_getStatDev",        "dr2_getUID",         "dr2_getGID",        "dr2_getINode",
+        "dr2_getLastChangeTime", "dr2_mtime",          "dr2fileChangeDate", "dr2areEqualUID:",
+        "dr2isSameDevice:",      "dr2buildDirFileUID:"};
     unsigned i;
     for (i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
-        Method original = class_getInstanceMethod([NSFileAttributes class], sel_registerName(names[i]));
-        Method replacement = class_getInstanceMethod([NSFileAttributes class], sel_registerName(adapters[i]));
-        if (original) original->method_imp = replacement->method_imp;
+        Method original =
+            class_getInstanceMethod([NSFileAttributes class], sel_registerName(names[i]));
+        Method replacement =
+            class_getInstanceMethod([NSFileAttributes class], sel_registerName(adapters[i]));
+        if (original)
+            original->method_imp = replacement->method_imp;
     }
 }

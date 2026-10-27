@@ -11,26 +11,32 @@ enum {
     LowSpaceDivisor = 20
 };
 
-static long long freeSpace(id receiver, SEL selector, BOOL *low,
-                          NSString *directory, NSString *file) {
+static long long freeSpace(id receiver, SEL selector, BOOL *low, NSString *directory,
+                           NSString *file) {
     NSString *path = file ? [directory stringByAppendingPathComponent:file] : directory;
     struct statfs volume;
     long long available, threshold;
-    if (low) *low = NO;
+    if (low)
+        *low = NO;
     /* The selection can still name a just-recycled file until the next redraw.
      * Query its containing filesystem instead of briefly reporting zero space. */
     while (statfs([path cString], &volume)) {
         NSString *parent;
-        if (errno != ENOENT && errno != ENOTDIR) return 0;
+        if (errno != ENOENT && errno != ENOTDIR)
+            return 0;
         parent = [path stringByDeletingLastPathComponent];
-        if (![parent length] || [parent isEqual:path]) return 0;
+        if (![parent length] || [parent isEqual:path])
+            return 0;
         path = parent;
     }
     available = (long long)volume.f_bavail * volume.f_bsize;
     threshold = (long long)volume.f_blocks * volume.f_bsize / LowSpaceDivisor;
-    if (threshold < MinimumLowSpace) threshold = MinimumLowSpace;
-    if (threshold > MaximumLowSpace) threshold = MaximumLowSpace;
-    if (low) *low = available < threshold;
+    if (threshold < MinimumLowSpace)
+        threshold = MinimumLowSpace;
+    if (threshold > MaximumLowSpace)
+        threshold = MaximumLowSpace;
+    if (low)
+        *low = available < threshold;
     return available;
 }
 
@@ -38,8 +44,9 @@ static IMP originalRefreshHeuristic;
 static BOOL refreshingCompletedOperation;
 
 static BOOL shouldRefreshWindow(id window, SEL selector) {
-    if (refreshingCompletedOperation) return YES;
-    return ((BOOL (*)(id, SEL))originalRefreshHeuristic)(window, selector);
+    if (refreshingCompletedOperation)
+        return YES;
+    return ((BOOL(*)(id, SEL))originalRefreshHeuristic)(window, selector);
 }
 
 void DR2RefreshViewerAfterFileOperation(void) {
@@ -48,8 +55,8 @@ void DR2RefreshViewerAfterFileOperation(void) {
      * A completed user operation should update its result without that wait. */
     refreshingCompletedOperation = YES;
     NS_DURING
-        [[NSNotificationCenter defaultCenter]
-            postNotificationName:@"ViewerNodeStructureChanged" object:nil];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"ViewerNodeStructureChanged"
+                                                            object:nil];
     NS_HANDLER
         refreshingCompletedOperation = wasRefreshing;
         [localException raise];
@@ -61,10 +68,10 @@ void DR2InitializeViewer(void) {
     Method method;
     DR2InitializeFileAttributes();
     method = class_getInstanceMethod(NSClassFromString(@"Device"),
-        @selector(freeSpaceAndLow:forDir:file:));
+                                     @selector(freeSpaceAndLow:forDir:file:));
     method->method_imp = (IMP)freeSpace;
-    method = class_getInstanceMethod(NSClassFromString(@"WMWindow"),
-        @selector(heuristicForRealUpdate));
+    method =
+        class_getInstanceMethod(NSClassFromString(@"WMWindow"), @selector(heuristicForRealUpdate));
     originalRefreshHeuristic = method->method_imp;
     method->method_imp = (IMP)shouldRefreshWindow;
 }
@@ -82,6 +89,5 @@ void DR2InitializeViewer(void) {
 @end
 
 void NSShowSystemInfoPanel(void) {
-    NSRunAlertPanel(@"Viewer DR2", @"Rhapsody DR2 Viewer on OPENSTEP 4.2",
-                   @"OK", nil, nil);
+    NSRunAlertPanel(@"Viewer DR2", @"Rhapsody DR2 Viewer on OPENSTEP 4.2", @"OK", nil, nil);
 }

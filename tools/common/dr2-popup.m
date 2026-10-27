@@ -113,11 +113,11 @@ static void restorePopupImages(NSArray *items) {
         }
         /* Native tracking borrows the selected item's image, then clears it. */
         NS_DURING
-        result = [super sendAction:action to:target];
+            result = [super sendAction:action to:target];
         NS_HANDLER
-        restorePopupImages(items);
-        [items release];
-        [localException raise];
+            restorePopupImages(items);
+            [items release];
+            [localException raise];
         NS_ENDHANDLER
         restorePopupImages(items);
         [items release];

@@ -1,0 +1,19 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ObjCBlockIndentWidth: 4
+ColumnLimit: 100
+LineEnding: LF
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BreakStringLiterals: false
+SortIncludes: Never
+ReflowComments: false
+
+# OPENSTEP exception macros form a try/handler block.
+Macros:
+  - NS_DURING=if (1) {
+  - NS_HANDLER=} else {
+  - NS_ENDHANDLER=}

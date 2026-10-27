@@ -16,10 +16,13 @@ NSString *NSViewFrameChangedNotification = nil;
 @implementation NSUserAccount
 + currentAccount {
     static NSUserAccount *account = nil;
-    if (!account) account = [[self alloc] init];
+    if (!account)
+        account = [[self alloc] init];
     return account;
 }
-- (NSString *)accountName { return NSUserName(); }
+- (NSString *)accountName {
+    return NSUserName();
+}
 @end
 
 static IMP originalMailInit = 0;
@@ -49,12 +52,13 @@ static id MailInit(id receiver, SEL selector) {
     NSMutableArray *domains = [[defaults searchList] mutableCopy];
     if (![domains containsObject:@"Message"]) {
         unsigned int index = [domains indexOfObject:NSGlobalDomain];
-        if (index == NSNotFound) index = [domains count];
+        if (index == NSNotFound)
+            index = [domains count];
         [domains insertObject:@"Message" atIndex:index];
         [defaults setSearchList:domains];
     }
     [domains release];
-    return ((id (*)(id, SEL))originalMailInit)(receiver, selector);
+    return ((id(*)(id, SEL))originalMailInit)(receiver, selector);
 }
 
 @interface MailViewerCompatibility : NSObject
@@ -62,7 +66,8 @@ static id MailInit(id receiver, SEL selector) {
 @implementation MailViewerCompatibility
 + (void)load {
     Method init = class_getInstanceMethod(NSClassFromString(@"MailApp"), @selector(init));
-    Method ready = class_getInstanceMethod(NSClassFromString(@"MailApp"), @selector(applicationDidFinishLaunching:));
+    Method ready = class_getInstanceMethod(NSClassFromString(@"MailApp"),
+                                           @selector(applicationDidFinishLaunching:));
     NSViewFrameChangedNotification = NSViewFrameDidChangeNotification;
     originalMailInit = init->method_imp;
     init->method_imp = (IMP)MailInit;
@@ -89,21 +94,28 @@ static id MailInit(id receiver, SEL selector) {
 @interface TextDocumentViewer : NSObject
 @end
 @implementation TextDocumentViewer (MailViewerHeadersCompatibility)
-- (void)toggleHeaders:(id)sender { [self setShowAllHeaders:![self isShowingAllHeaders]]; }
+- (void)toggleHeaders:(id)sender {
+    [self setShowAllHeaders:![self isShowingAllHeaders]];
+}
 @end
 
 @interface MailApp : NSApplication
 @end
 @implementation MailApp (MailViewerServicesCompatibility)
-- (void)registerServiceProvider:(id)provider withName:(NSString *)name { [self setServicesProvider:provider]; }
+- (void)registerServiceProvider:(id)provider withName:(NSString *)name {
+    [self setServicesProvider:provider];
+}
 @end
 
 static BOOL MailDirectory(NSString *path) {
     NSFileManager *files = [NSFileManager defaultManager];
     BOOL directory = NO;
-    if ([files fileExistsAtPath:path isDirectory:&directory]) return directory;
-    if (![path length] || [path isEqual:@"/"]) return NO;
-    if (!MailDirectory([path stringByDeletingLastPathComponent])) return NO;
+    if ([files fileExistsAtPath:path isDirectory:&directory])
+        return directory;
+    if (![path length] || [path isEqual:@"/"])
+        return NO;
+    if (!MailDirectory([path stringByDeletingLastPathComponent]))
+        return NO;
     return [files createDirectoryAtPath:path attributes:nil];
 }
 
@@ -111,7 +123,9 @@ static BOOL MailDirectory(NSString *path) {
 @implementation MailApp (MailViewerDraftsCompatibility)
 - draftsStore:(BOOL)create {
     NSString *directory = [[NSClassFromString(@"Defaults") sharedInstance] defaultMailDirectory];
-    NSString *name = [[NSBundle mainBundle] localizedStringForKey:@"Drafts.mbox" value:@"Drafts.mbox" table:@"Paths"];
+    NSString *name = [[NSBundle mainBundle] localizedStringForKey:@"Drafts.mbox"
+                                                            value:@"Drafts.mbox"
+                                                            table:@"Paths"];
     NSString *path = [[directory stringByAppendingPathComponent:name] stringByStandardizingPath];
     NSFileManager *files = [NSFileManager defaultManager];
     if (create && ![files fileExistsAtPath:path]) {
@@ -123,13 +137,15 @@ static BOOL MailDirectory(NSString *path) {
         }
         mbox = [path stringByAppendingPathComponent:@"mbox"];
         descriptor = open([mbox fileSystemRepresentation], O_WRONLY | O_CREAT | O_EXCL, 0600);
-        if (descriptor >= 0) close(descriptor);
+        if (descriptor >= 0)
+            close(descriptor);
         else if (errno != EEXIST) {
             NSRunAlertPanel(@"Save Draft", @"Cannot create %@.", @"OK", nil, nil, mbox);
             return nil;
         }
     }
-    return [files fileExistsAtPath:path] ? [NSClassFromString(@"MessageStore") storeForPath:path] : nil;
+    return [files fileExistsAtPath:path] ? [NSClassFromString(@"MessageStore") storeForPath:path]
+                                         : nil;
 }
 @end
 
@@ -138,5 +154,6 @@ static BOOL MailDirectory(NSString *path) {
 @interface NSViewBubbleHelper : NSObject
 @end
 @implementation NSViewBubbleHelper (MailViewer42Compatibility)
-+ (void)displayHelpText { }
++ (void)displayHelpText {
+}
 @end

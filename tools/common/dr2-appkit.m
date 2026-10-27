@@ -71,9 +71,15 @@ enum {
     archivedMenu = [menu retain];
     return self;
 }
-- (NSMenu *)archivedMenu { return archivedMenu; }
-- (int)archivedSelection { return archivedSelection; }
-- (BOOL)pullsDown { return (archivedFlags & PopupPullsDownMask) != 0; }
+- (NSMenu *)archivedMenu {
+    return archivedMenu;
+}
+- (int)archivedSelection {
+    return archivedSelection;
+}
+- (BOOL)pullsDown {
+    return (archivedFlags & PopupPullsDownMask) != 0;
+}
 - (void)dealloc {
     [archivedMenu release];
     [super dealloc];
@@ -81,8 +87,10 @@ enum {
 @end
 
 @interface NSPopUpButton (DR2PopupDecoding)
-- _initWithFrame:(NSRect)frame popUpList:(id)menu
-      protoButton:(NSButton *)button pullsDown:(BOOL)flag;
+- _initWithFrame:(NSRect)frame
+       popUpList:(id)menu
+     protoButton:(NSButton *)button
+       pullsDown:(BOOL)flag;
 @end
 @interface DR2PopupAction : NSObject {
     id archivedItem;
@@ -129,7 +137,8 @@ static void finishPopups(void) {
             [item setKeyEquivalent:[source keyEquivalent]];
             if ([source action] && strcmp(sel_getName([source action]), "_popUpItemAction:")) {
                 DR2PopupAction *action = [[DR2PopupAction alloc] initWithItem:source];
-                if (!popupActions) popupActions = [[NSMutableArray alloc] init];
+                if (!popupActions)
+                    popupActions = [[NSMutableArray alloc] init];
                 [popupActions addObject:action];
                 [item setTarget:action];
                 [item setAction:@selector(invoke:)];
@@ -149,13 +158,15 @@ static BOOL loadNib(id receiver, SEL selector, NSString *file, NSDictionary *tab
     IMP original = receiver == [NSBundle class] ? originalClassLoadNib : originalInstanceLoadNib;
     loadingNibs++;
     NS_DURING
-        result = ((BOOL (*)(id, SEL, id, id, NSZone *))original)(receiver, selector, file, table, zone);
+        result =
+            ((BOOL(*)(id, SEL, id, id, NSZone *))original)(receiver, selector, file, table, zone);
     NS_HANDLER
         loadingNibs--;
         [localException raise];
     NS_ENDHANDLER
     loadingNibs--;
-    if (!loadingNibs) finishPopups();
+    if (!loadingNibs)
+        finishPopups();
     return result;
 }
 static id decodePopup(id receiver, SEL selector, NSCoder *coder) {
@@ -163,16 +174,19 @@ static id decodePopup(id receiver, SEL selector, NSCoder *coder) {
     Method decodeButton;
     NSPopUpButtonCell *cell;
     if (version <= LastLegacyPopupVersion || version == INT_MAX)
-        return ((id (*)(id, SEL, id))originalPopupDecode)(receiver, selector, coder);
+        return ((id(*)(id, SEL, id))originalPopupDecode)(receiver, selector, coder);
 
     decodeButton = class_getInstanceMethod([NSButton class], selector);
-    receiver = ((id (*)(id, SEL, id))decodeButton->method_imp)(receiver, selector, coder);
+    receiver = ((id(*)(id, SEL, id))decodeButton->method_imp)(receiver, selector, coder);
     cell = [receiver cell];
     /* Preserve the decoded view and cell while installing native popup tracking. */
-    [receiver _initWithFrame:[receiver frame] popUpList:nil
-                 protoButton:receiver pullsDown:[cell pullsDown]];
+    [receiver _initWithFrame:[receiver frame]
+                   popUpList:nil
+                 protoButton:receiver
+                   pullsDown:[cell pullsDown]];
     [receiver setFont:[cell font]];
-    if (!pendingPopups) pendingPopups = [[NSMutableArray alloc] init];
+    if (!pendingPopups)
+        pendingPopups = [[NSMutableArray alloc] init];
     [pendingPopups addObject:[NSArray arrayWithObjects:receiver, cell, nil]];
     return receiver;
 }
@@ -201,16 +215,18 @@ static id decodeScroll(id receiver, SEL selector, NSCoder *coder) {
     id result;
     decodingScroll++;
     NS_DURING
-    result = ((id(*)(id, SEL, id))originalScrollDecode)(receiver, selector, coder);
+        result = ((id(*)(id, SEL, id))originalScrollDecode)(receiver, selector, coder);
     NS_HANDLER
-    decodingScroll--;
-    [localException raise];
+        decodingScroll--;
+        [localException raise];
     NS_ENDHANDLER
     decodingScroll--;
     return result;
 }
 static void decodeValues(id receiver, SEL selector, const char *types, ...) {
-    enum { MaximumValues = 32 };
+    enum {
+        MaximumValues = 32
+    };
     void *values[MaximumValues];
     const char *type = types;
     unsigned count = 0, size, align;
@@ -223,23 +239,21 @@ static void decodeValues(id receiver, SEL selector, const char *types, ...) {
     }
     va_end(args);
     if (*type)
-        [NSException
-             raise:NSInvalidArgumentException
-            format:@"Archive has too many fields: %s (remaining %s)", types, type];
+        [NSException raise:NSInvalidArgumentException
+                    format:@"Archive has too many fields: %s (remaining %s)", types, type];
     if (decodingScroll && !strcmp(types, "ffi") &&
         [receiver versionForClassName:@"NSScrollView"] > LastLegacyScrollVersion) {
         float horizontalLine, horizontalPage;
         ((void (*)(id, SEL, const char *, ...))originalDecodeValues)(
-            receiver, selector, "ffffi", &horizontalLine, values[0], &horizontalPage,
-            values[1], values[2]);
+            receiver, selector, "ffffi", &horizontalLine, values[0], &horizontalPage, values[1],
+            values[2]);
     } else {
         ((void (*)(id, SEL, const char *, ...))originalDecodeValues)(
-            receiver, selector, types, values[0], values[1], values[2], values[3],
-            values[4], values[5], values[6], values[7], values[8], values[9],
-            values[10], values[11], values[12], values[13], values[14], values[15],
-            values[16], values[17], values[18], values[19], values[20], values[21],
-            values[22], values[23], values[24], values[25], values[26], values[27],
-            values[28], values[29], values[30], values[31]);
+            receiver, selector, types, values[0], values[1], values[2], values[3], values[4],
+            values[5], values[6], values[7], values[8], values[9], values[10], values[11],
+            values[12], values[13], values[14], values[15], values[16], values[17], values[18],
+            values[19], values[20], values[21], values[22], values[23], values[24], values[25],
+            values[26], values[27], values[28], values[29], values[30], values[31]);
     }
 }
 
@@ -247,8 +261,7 @@ static void decodeValues(id receiver, SEL selector, const char *types, ...) {
 + (NSArray *)pathsForResourcesOfType:(NSString *)type inDirectory:(NSString *)directory;
 @end
 @implementation NSBundle (DR2ResourceLookup)
-+ (NSArray *)pathsForResourcesOfType:(NSString *)type
-                         inDirectory:(NSString *)directory {
++ (NSArray *)pathsForResourcesOfType:(NSString *)type inDirectory:(NSString *)directory {
     NSMutableArray *result = [NSMutableArray array];
     NSArray *names = [[NSFileManager defaultManager] directoryContentsAtPath:directory];
     unsigned i;
@@ -339,9 +352,8 @@ static id decodeMenuCell(id receiver, SEL selector, NSCoder *coder) {
         return ((id(*)(id, SEL, id))originalMenuCellDecode)(receiver, selector, coder);
     receiver = [receiver initTextCell:@""];
     parent = [coder decodeObject];
-    [coder decodeValuesOfObjCTypes:"i@@IIi@@@@:i@", &flags, &title, &key, &modifiers,
-                                   &keycode, &state, &image, &on, &off, &mixed, &action,
-                                   &tag, &represented];
+    [coder decodeValuesOfObjCTypes:"i@@IIi@@@@:i@", &flags, &title, &key, &modifiers, &keycode,
+                                   &state, &image, &on, &off, &mixed, &action, &tag, &represented];
     target = [coder decodeObject];
     if (version >= SeparateMenuItemSubmenuVersion) {
         submenu = [coder decodeObject];
@@ -371,28 +383,26 @@ static id decodeMenuCell(id receiver, SEL selector, NSCoder *coder) {
     originalPopupDecode = method->method_imp;
     method->method_imp = (IMP)decodePopup;
     [NSUnarchiver decodeClassName:@"NSNibConnector" asClassName:@"NSIBConnector"];
-    [NSUnarchiver decodeClassName:@"NSNibControlConnector"
-                      asClassName:@"NSIBControlConnector"];
-    [NSUnarchiver decodeClassName:@"NSNibOutletConnector"
-                      asClassName:@"NSIBOutletConnector"];
+    [NSUnarchiver decodeClassName:@"NSNibControlConnector" asClassName:@"NSIBControlConnector"];
+    [NSUnarchiver decodeClassName:@"NSNibOutletConnector" asClassName:@"NSIBOutletConnector"];
     method = class_getInstanceMethod([NSScrollView class], @selector(initWithCoder:));
     originalScrollDecode = method->method_imp;
     method->method_imp = (IMP)decodeScroll;
-    method = class_getInstanceMethod([NSUnarchiver class],
-                                     @selector(decodeValuesOfObjCTypes:));
+    method = class_getInstanceMethod([NSUnarchiver class], @selector(decodeValuesOfObjCTypes:));
     originalDecodeValues = method->method_imp;
     method->method_imp = (IMP)decodeValues;
     method = class_getInstanceMethod([NSMenu class], @selector(initWithCoder:));
     originalMenuDecode = method->method_imp;
     method->method_imp = (IMP)decodeMenu;
-    method = class_getInstanceMethod(NSClassFromString(@"NSMenuCell"),
-                                     @selector(initWithCoder:));
+    method = class_getInstanceMethod(NSClassFromString(@"NSMenuCell"), @selector(initWithCoder:));
     originalMenuCellDecode = method->method_imp;
     method->method_imp = (IMP)decodeMenuCell;
-    method = class_getClassMethod([NSBundle class], @selector(loadNibFile:externalNameTable:withZone:));
+    method = class_getClassMethod([NSBundle class], @selector(loadNibFile:
+                                                        externalNameTable:withZone:));
     originalClassLoadNib = method->method_imp;
     method->method_imp = (IMP)loadNib;
-    method = class_getInstanceMethod([NSBundle class], @selector(loadNibFile:externalNameTable:withZone:));
+    method = class_getInstanceMethod([NSBundle class], @selector(loadNibFile:
+                                                           externalNameTable:withZone:));
     originalInstanceLoadNib = method->method_imp;
     method->method_imp = (IMP)loadNib;
     [pool release];

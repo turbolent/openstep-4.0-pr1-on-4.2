@@ -2,7 +2,9 @@
 #import <AppKit/AppKit.h>
 #import <objc/objc-class.h>
 
-enum { MaximumUndoStates = 100 };
+enum {
+    MaximumUndoStates = 100
+};
 static NSMutableDictionary *histories;
 static IMP originalComposeDealloc;
 
@@ -35,8 +37,7 @@ static void composeDealloc(id receiver, SEL selector) {
 
 @implementation DR2TextHistory
 + (void)load {
-    Method method =
-        class_getInstanceMethod(NSClassFromString(@"ComposeText"), @selector(dealloc));
+    Method method = class_getInstanceMethod(NSClassFromString(@"ComposeText"), @selector(dealloc));
     if (!method)
         return;
     originalComposeDealloc = method->method_imp;

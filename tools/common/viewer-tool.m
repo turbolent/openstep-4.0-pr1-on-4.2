@@ -32,17 +32,19 @@ extern id NSTool;
     defaults = [NSUserDefaults standardUserDefaults];
     /* Foundation 4.2 returns an immutable preferences search list. */
     domains = [[defaults searchList] mutableCopy];
-    #ifdef VIEWER_DR2
+#ifdef VIEWER_DR2
     [domains insertObject:@"ViewerDR2" atIndex:0];
 #else
     [domains insertObject:@"Viewer" atIndex:0];
 #endif
     [defaults setSearchList:domains];
     [domains release];
-    [defaults registerDefaults:[NSDictionary dictionaryWithObjectsAndKeys:
-        @"/bin/rm", @"rm", @"/usr/bin/gnutar", @"tar",
-        @"/usr/ucb/compress", @"compress", @"/usr/ucb/uncompress", @"uncompress",
-        @"Yes", @"AlwaysTarForCompress", nil]];
+    [defaults
+        registerDefaults:[NSDictionary
+                             dictionaryWithObjectsAndKeys:@"/bin/rm", @"rm", @"/usr/bin/gnutar",
+                                                          @"tar", @"/usr/ucb/compress", @"compress",
+                                                          @"/usr/ucb/uncompress", @"uncompress",
+                                                          @"Yes", @"AlwaysTarForCompress", nil]];
 #ifdef VIEWER_DR2
     DR2InitializeFileAttributes();
 #endif

@@ -12,8 +12,7 @@ enum {
     SearchDomainCount = 4
 };
 
-NSArray *NSSearchPathForDirectoriesInDomains(unsigned directory, unsigned domains,
-                                             BOOL expand) {
+NSArray *NSSearchPathForDirectoriesInDomains(unsigned directory, unsigned domains, BOOL expand) {
     NSMutableArray *paths = [NSMutableArray array];
     NSString *bases[SearchDomainCount] = {@"~", @"/LocalLibrary", @"/Network/Library",
                                           @"/NextLibrary"};
@@ -26,8 +25,7 @@ NSArray *NSSearchPathForDirectoriesInDomains(unsigned directory, unsigned domain
         if (directory == DR2LibraryDirectory || directory == DR2AllLibraries) {
             if (index == 0)
                 path = @"~/Library";
-        } else if (directory == DR2ApplicationDirectory ||
-                   directory == DR2AllApplications) {
+        } else if (directory == DR2ApplicationDirectory || directory == DR2AllApplications) {
             path = index == 0   ? @"~/Apps"
                    : index == 1 ? @"/LocalApps"
                    : index == 2 ? @"/Network/Apps"
