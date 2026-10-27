@@ -10,7 +10,7 @@ cc -dynamiclib -undefined suppress \
 cc -dynamiclib -undefined suppress \
     -Wl,-install_name,"$bundle/ToolCompat.dylib",-compatibility_version,1.0,-current_version,1.0 \
     -o "$bundle/ToolCompat.dylib.new" "$sources/tool-compat.m" -framework Foundation
-cc -o "$bundle/OpenItem.new" "$sources/open-item.m" -framework AppKit -framework Foundation
+cc -o "$bundle/OpenItem.new" "$sources/../common/viewer-open-item.m" -framework AppKit -framework Foundation
 mv "$bundle/ViewerCompat.dylib.new" "$bundle/ViewerCompat.dylib"
 mv "$bundle/ToolCompat.dylib.new" "$bundle/ToolCompat.dylib"
 mv "$bundle/OpenItem.new" "$bundle/OpenItem"

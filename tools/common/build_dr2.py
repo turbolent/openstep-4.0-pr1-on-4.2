@@ -7,9 +7,10 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-from . import EXECUTABLE_MODE, FILE_MODE, require
+from . import EXECUTABLE_MODE, FILE_MODE, macho, require
 from .dr2 import install_path
 
+ARCHIVE_TIMESTAMP = 946684800  # 2000-01-01; accepted by OPENSTEP's GNU tar.
 
 def package(bundle, archive, app_name):
     with archive.open("wb") as raw:
@@ -22,9 +23,11 @@ def package(bundle, archive, app_name):
                         continue
                     name = path.relative_to(bundle).as_posix()
                     info = tarfile.TarInfo(name)
+                    info.mtime = ARCHIVE_TIMESTAMP
                     data = path.read_bytes()
                     info.size = len(data)
-                    info.mode = EXECUTABLE_MODE if name == app_name else FILE_MODE
+                    executable = name in (app_name, "search") or macho.is_intel_image(data, macho.MH_EXECUTE)
+                    info.mode = EXECUTABLE_MODE if executable else FILE_MODE
                     tar.addfile(info, io.BytesIO(data))
 
 

@@ -8,7 +8,7 @@ if __package__ in (None, ""):
 
 
 def main():
-    targets = ("dock", "viewer", "mailviewer", "mailviewer-dr2", "stickies-dr2")
+    targets = ("dock", "viewer", "mailviewer", "mailviewer-dr2", "stickies-dr2", "viewer-dr2")
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
         print(
             "Usage: python tools/build.py {" + "|".join(targets) + "} [build options]\n"
@@ -24,6 +24,8 @@ def main():
         from tools.MailViewer.build import main as build_main
     elif target == "mailviewer-dr2":
         from tools.MailViewerDR2.build import main as build_main
+    elif target == "viewer-dr2":
+        from tools.ViewerDR2.build import main as build_main
     else:
         from tools.StickiesDR2.build import main as build_main
     build_main()

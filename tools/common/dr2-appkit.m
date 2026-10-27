@@ -84,37 +84,96 @@ enum {
 - _initWithFrame:(NSRect)frame popUpList:(id)menu
       protoButton:(NSButton *)button pullsDown:(BOOL)flag;
 @end
+@interface DR2PopupAction : NSObject {
+    id archivedItem;
+}
+- initWithItem:(id)item;
+- (void)invoke:(id)sender;
+@end
+@implementation DR2PopupAction
+- initWithItem:(id)item {
+    self = [super init];
+    archivedItem = [item retain];
+    return self;
+}
+- (void)invoke:(id)sender {
+    [NSApp sendAction:[archivedItem action] to:[archivedItem target] from:archivedItem];
+}
+- (void)dealloc {
+    [archivedItem release];
+    [super dealloc];
+}
+@end
+static NSMutableArray *popupActions;
 static IMP originalPopupDecode;
+static NSMutableArray *pendingPopups;
+/* A menu can refer back to its button while the cell is still decoding.
+ * Read menu contents only after the outermost nib load has finished. */
+static void finishPopups(void) {
+    while ([pendingPopups count]) {
+        NSArray *pair = [[pendingPopups lastObject] retain];
+        NSPopUpButton *button = [pair objectAtIndex:0];
+        NSPopUpButtonCell *cell = [pair objectAtIndex:1];
+        NSArray *items = [[cell archivedMenu] itemArray];
+        unsigned i;
+        [pendingPopups removeLastObject];
+        for (i = 0; i < [items count]; i++) {
+            id source = [items objectAtIndex:i];
+            id item;
+            [button addItemWithTitle:[source title]];
+            item = [button lastItem];
+            [item setTag:[source tag]];
+            [item setRepresentedObject:[source representedObject]];
+            [item setEnabled:[source isEnabled]];
+            [item setImage:[source image]];
+            [item setKeyEquivalent:[source keyEquivalent]];
+            if ([source action] && strcmp(sel_getName([source action]), "_popUpItemAction:")) {
+                DR2PopupAction *action = [[DR2PopupAction alloc] initWithItem:source];
+                if (!popupActions) popupActions = [[NSMutableArray alloc] init];
+                [popupActions addObject:action];
+                [item setTarget:action];
+                [item setAction:@selector(invoke:)];
+                [action release];
+            }
+        }
+        if ([cell archivedSelection] >= 0 && [cell archivedSelection] < [items count])
+            [button selectItemAtIndex:[cell archivedSelection]];
+        [button setNeedsDisplay:YES];
+        [pair release];
+    }
+}
+static IMP originalClassLoadNib, originalInstanceLoadNib;
+static unsigned loadingNibs;
+static BOOL loadNib(id receiver, SEL selector, NSString *file, NSDictionary *table, NSZone *zone) {
+    BOOL result;
+    IMP original = receiver == [NSBundle class] ? originalClassLoadNib : originalInstanceLoadNib;
+    loadingNibs++;
+    NS_DURING
+        result = ((BOOL (*)(id, SEL, id, id, NSZone *))original)(receiver, selector, file, table, zone);
+    NS_HANDLER
+        loadingNibs--;
+        [localException raise];
+    NS_ENDHANDLER
+    loadingNibs--;
+    if (!loadingNibs) finishPopups();
+    return result;
+}
 static id decodePopup(id receiver, SEL selector, NSCoder *coder) {
     int version = [coder versionForClassName:@"NSPopUpButton"];
     Method decodeButton;
     NSPopUpButtonCell *cell;
-    NSArray *items;
-    unsigned i;
     if (version <= LastLegacyPopupVersion || version == INT_MAX)
         return ((id (*)(id, SEL, id))originalPopupDecode)(receiver, selector, coder);
 
     decodeButton = class_getInstanceMethod([NSButton class], selector);
     receiver = ((id (*)(id, SEL, id))decodeButton->method_imp)(receiver, selector, coder);
     cell = [receiver cell];
-    items = [[cell archivedMenu] itemArray];
     /* Preserve the decoded view and cell while installing native popup tracking. */
     [receiver _initWithFrame:[receiver frame] popUpList:nil
                  protoButton:receiver pullsDown:[cell pullsDown]];
     [receiver setFont:[cell font]];
-    for (i = 0; i < [items count]; i++) {
-        id source = [items objectAtIndex:i];
-        id item;
-        [receiver addItemWithTitle:[source title]];
-        item = [receiver lastItem];
-        [item setTag:[source tag]];
-        [item setRepresentedObject:[source representedObject]];
-        [item setEnabled:[source isEnabled]];
-        [item setImage:[source image]];
-        [item setKeyEquivalent:[source keyEquivalent]];
-    }
-    if ([cell archivedSelection] >= 0 && [cell archivedSelection] < [items count])
-        [receiver selectItemAtIndex:[cell archivedSelection]];
+    if (!pendingPopups) pendingPopups = [[NSMutableArray alloc] init];
+    [pendingPopups addObject:[NSArray arrayWithObjects:receiver, cell, nil]];
     return receiver;
 }
 
@@ -330,6 +389,12 @@ static id decodeMenuCell(id receiver, SEL selector, NSCoder *coder) {
                                      @selector(initWithCoder:));
     originalMenuCellDecode = method->method_imp;
     method->method_imp = (IMP)decodeMenuCell;
+    method = class_getClassMethod([NSBundle class], @selector(loadNibFile:externalNameTable:withZone:));
+    originalClassLoadNib = method->method_imp;
+    method->method_imp = (IMP)loadNib;
+    method = class_getInstanceMethod([NSBundle class], @selector(loadNibFile:externalNameTable:withZone:));
+    originalInstanceLoadNib = method->method_imp;
+    method->method_imp = (IMP)loadNib;
     [pool release];
 }
 @end

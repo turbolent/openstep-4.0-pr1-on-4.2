@@ -1,14 +1,9 @@
-/* Adapt DR2 MailViewer's toolbar controls to OPENSTEP 4.2. */
+/* Adapt DR2 MailViewer startup to OPENSTEP 4.2. */
 #import <AppKit/AppKit.h>
 #import <objc/objc-class.h>
-#include <string.h>
 
-extern void DR2InitializeCABI(void);
 extern void DR2FixSubmenus(void);
 static IMP originalMailReady;
-@interface NSObject (DR2MenuPrivate)
-- (NSMatrix *)itemMatrix;
-@end
 
 static void mailReady(id receiver, SEL selector, id notification) {
     DR2FixSubmenus();
@@ -16,146 +11,22 @@ static void mailReady(id receiver, SEL selector, id notification) {
     [[NSApp mainMenu] setTitle:@"MailViewer DR2"];
     [NSApp activateIgnoringOtherApps:YES];
 }
-@interface NSIconPopUpButton : NSPopUpButton
-@end
-@interface DR2IconItem : NSObject {
-    NSString *title;
-    NSImage *image;
-}
-- initWithTitle:(NSString *)value;
-- (NSString *)title;
-- (NSImage *)image;
-- (void)setImage:(NSImage *)value;
-@end
-@implementation DR2IconItem
-- initWithTitle:(NSString *)value {
-    self = [super init];
-    title = [value copy];
-    return self;
-}
-- (NSString *)title {
-    return title;
-}
-- (NSImage *)image {
-    return image;
-}
-- (void)setImage:(NSImage *)value {
-    [value retain];
-    [image release];
-    image = value;
-}
-- (void)dealloc {
-    [image release];
-    [title release];
-    [super dealloc];
-}
-@end
-
-static IMP originalButtonTitle;
-static NSString *iconButtonTitle(id receiver, SEL selector) {
-    id identity, control;
-    /* 4.2 hides image-only titles even from its popup's item lookup. */
-    if ([receiver respondsToSelector:@selector(representedObject)]) {
-        identity = [receiver representedObject];
-        if ([identity isKindOfClass:[DR2IconItem class]])
-            return [identity title];
-    }
-    control = [receiver controlView];
-    if ([control isKindOfClass:[NSIconPopUpButton class]] && [control selectedItem])
-        return [[control selectedItem] title];
-    return ((id(*)(id, SEL))originalButtonTitle)(receiver, selector);
-}
-
-static void syncPopupImage(NSPopUpButton *button) {
-    id item = [button selectedItem];
-    NSButtonCell *cell = [button cell];
-    if (item) {
-        DR2IconItem *identity = [item representedObject];
-        NSImage *image = [identity image];
-        if (!image)
-            image = [item image];
-        [cell setTitle:[item title]];
-        [cell setImage:image];
-        [cell setAlternateImage:image];
-        [cell setImagePosition:NSImageOnly];
-    }
-}
-static void restorePopupImages(NSArray *items) {
-    unsigned i;
-    for (i = 0; i < [items count]; i++) {
-        id item = [items objectAtIndex:i];
-        [item setImage:[[item representedObject] image]];
-    }
-}
-@implementation NSIconPopUpButton (DR2IconItems)
-- (void)setTitle:(NSString *)title {
-    /* 4.2's implementation adds a menu item; DR2 only changes the caption. */
-    [[self cell] setTitle:title];
-    [self setNeedsDisplay:YES];
-}
-- (void)addItemWithTitle:(NSString *)title {
-    /* 4.2 identifies popup items by title, even when only images are visible. */
-    NSString *unique = [NSString stringWithFormat:@"DR2 item %d", [self numberOfItems]];
-    DR2IconItem *identity = [[DR2IconItem alloc] initWithTitle:unique];
-    [super addItemWithTitle:unique];
-    [[self lastItem] setRepresentedObject:identity];
-    [identity release];
-    [(id)[self lastItem] setImagePosition:NSImageOnly];
-}
-- (void)drawRect:(NSRect)rect {
-    syncPopupImage(self);
-    [super drawRect:rect];
-}
-- (void)selectItemAtIndex:(int)index {
-    [super selectItemAtIndex:index];
-    syncPopupImage(self);
-    [self setNeedsDisplay:YES];
-}
-- (BOOL)sendAction:(SEL)action to:(id)target {
-    BOOL result;
-    /* MailViewer chooses the action by image name, before the next redraw. */
-    syncPopupImage(self);
-    if (action && !strcmp(sel_getName(action), "popUp:")) {
-        NSMutableArray *items = [[NSMutableArray alloc] init];
-        unsigned i;
-        /* The matrix's internal cell array deep-copies its cells on copy. */
-        for (i = 0; i < [self numberOfItems]; i++) {
-            id item = [self itemAtIndex:i];
-            [[item representedObject] setImage:[item image]];
-            [items addObject:item];
-        }
-        /* Native tracking borrows the selected item's image, then clears it. */
-        NS_DURING
-        result = [super sendAction:action to:target];
-        NS_HANDLER
-        restorePopupImages(items);
-        [items release];
-        [localException raise];
-        NS_ENDHANDLER
-        restorePopupImages(items);
-        [items release];
-        syncPopupImage(self);
-        [self setNeedsDisplay:YES];
-        return result;
-    }
-    return [super sendAction:action to:target];
-}
-@end
-
 @interface DR2MailRuntime : NSObject
 @end
 @implementation DR2MailRuntime
 + (void)load {
     Method method;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    method = class_getInstanceMethod([NSButtonCell class], @selector(title));
-    originalButtonTitle = method->method_imp;
-    method->method_imp = (IMP)iconButtonTitle;
     method = class_getInstanceMethod(NSClassFromString(@"MailApp"),
                                      @selector(applicationDidFinishLaunching:));
     originalMailReady = method->method_imp;
     method->method_imp = (IMP)mailReady;
-    DR2InitializeCABI();
     [pool release];
 }
 @end
+
+NSString *NSLinkAttributeName = @"NSLink";
+void NSShowSystemInfoPanel(void) {
+    NSRunAlertPanel(@"MailViewer DR2", @"Rhapsody DR2 MailViewer on OPENSTEP 4.2",
+                    @"OK", nil, nil);
+}

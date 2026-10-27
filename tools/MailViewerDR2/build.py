@@ -12,9 +12,9 @@ from .prepare import APP_NAME, inputs, install_path, prepare_bundle
 def build(source, frameworks, output, archive, destination):
     directory = Path(__file__).parent
     native = {name: directory / name for name in (
-        "abi.m", "compat.m", "undo.m", "build-on-openstep.sh",
+        "compat.m", "undo.m", "build-on-openstep.sh",
     )}
-    for name in ("dr2-appkit.m", "dr2-paths.m"):
+    for name in ("dr2-appkit.m", "dr2-paths.m", "dr2-abi.h", "dr2-abi.m", "dr2-popup.m"):
         native["common/" + name] = directory.parent / "common" / name
     return build_bundle(
         sources=inputs(source, frameworks), input_roots=(source, frameworks),

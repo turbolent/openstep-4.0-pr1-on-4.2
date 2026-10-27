@@ -1,7 +1,7 @@
 # OPENSTEP PR1 and Rhapsody DR2 apps on OPENSTEP 4.2
 
 This project ports the Dock, Viewer, and MailViewer from OPENSTEP 4.0 Pre-release 1 (PR1) to OPENSTEP 4.2 for Intel.
-It also ports MailViewer and Stickies from Rhapsody Developer Release 2 (DR2).
+It also ports Viewer, MailViewer, and Stickies from Rhapsody Developer Release 2 (DR2).
 The builders patch the original executables and add compatibility helpers compiled from the included source.
 The Dock comes from PR1's `Workspace.app`.
 
@@ -44,6 +44,12 @@ Prepare the DR2 apps from an extracted DR2 system tree:
 ```sh
 dr2="/path/to/DR2"
 
+python3 -B tools/build.py viewer-dr2 \
+  --source "$dr2/System/Library/CoreServices/Viewer.app" \
+  --appsupport "$dr2/System/Library/PrivateFrameworks/AppSupport.framework" \
+  --output "$out/ViewerDR2.app" \
+  --install-path /LocalApps/ViewerDR2.app
+
 python3 -B tools/build.py mailviewer-dr2 \
   --source "$dr2/System/Applications/MailViewer.app" \
   --frameworks "$dr2/System/Library" \
@@ -57,5 +63,6 @@ python3 -B tools/build.py stickies-dr2 \
 ```
 
 Install each archive and compile its compatibility source on OPENSTEP 4.2
-as described for [MailViewer](tools/MailViewerDR2/README.md#usage)
+as described for [Viewer](tools/ViewerDR2/README.md#usage),
+[MailViewer](tools/MailViewerDR2/README.md#usage),
 and [Stickies](tools/StickiesDR2/README.md#usage).

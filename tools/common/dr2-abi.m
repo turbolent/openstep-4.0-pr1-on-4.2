@@ -8,6 +8,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/dir.h>
+#include <sys/vfs.h>
+#include "dr2-abi.h"
 
 /* Both Intel handler structures reserve a jump buffer and four words.
  * DR2 accesses those words only through these three entry points. */
@@ -19,12 +22,6 @@ void _NSRemoveHandler2(NSHandler *handler) {
 }
 id _NSExceptionObjectFromHandler2(NSHandler *handler) {
     return _NSExceptionObjectFromHandler(handler);
-}
-
-NSString *NSLinkAttributeName = @"NSLink";
-void NSShowSystemInfoPanel(void) {
-    NSRunAlertPanel(@"MailViewer DR2", @"Rhapsody DR2 MailViewer on OPENSTEP 4.2",
-                    @"OK", nil, nil);
 }
 
 enum { DR2RuneCount = 256, DR2FileSize = 88, DR2FileEOF = 0x20, DR2FileError = 0x40 };
@@ -150,16 +147,6 @@ void DR2setbuf(DR2File *file, char *buffer) {
     updateFile(file);
 }
 
-struct DR2Stat {
-    unsigned dev, ino;
-    unsigned short mode, links;
-    unsigned uid, gid, rdev;
-    long accessTime, accessNsec, modifyTime, modifyNsec, changeTime, changeNsec;
-    long long size, blocks;
-    unsigned blocksize, flags, generation;
-    int spare;
-    long long spare2[2];
-};
 static void convertStat(struct DR2Stat *out, struct stat *in) {
     memset(out, 0, sizeof(*out));
     out->dev = in->st_dev;
@@ -234,3 +221,96 @@ void DR2InitializeCABI(void) {
     for (c = 0; c < 3; c++)
         updateFile(&__sF[c]);
 }
+
+int DR2fflush(DR2File *file) {
+    int result = fflush(file ? nativeFile(file) : NULL);
+    if (file) updateFile(file);
+    return result;
+}
+char *DR2fgets(char *buffer, int size, DR2File *file) {
+    char *result = fgets(buffer, size, nativeFile(file));
+    updateFile(file);
+    return result;
+}
+int DR2lstat(const char *path, struct DR2Stat *out) {
+    struct stat native;
+    int result = lstat(path, &native);
+    if (!result) convertStat(out, &native);
+    return result;
+}
+struct DR2Dirent {
+    unsigned long inode;
+    unsigned short reclen;
+    unsigned char type, length;
+    char name[MAXNAMLEN + 1];
+};
+struct DR2Dirent *DR2readdir(DIR *dir) {
+    static struct DR2Dirent result;
+    struct direct *entry = readdir(dir);
+    if (!entry) return NULL;
+    result.inode = entry->d_fileno;
+    result.reclen = sizeof(result);
+    result.type = 0;
+    result.length = entry->d_namlen;
+    strcpy(result.name, entry->d_name);
+    return &result;
+}
+struct DR2StatFS {
+    short type, flags;
+    long bsize, iosize, blocks, bfree, bavail, files, ffree;
+    fsid_t fsid;
+    unsigned owner;
+    long spare[4];
+    char typename[15], mounted[90], source[90];
+};
+int DR2statfs(const char *path, struct DR2StatFS *out) {
+    struct statfs native;
+    int result = statfs(path, &native);
+    if (result) return result;
+    memset(out, 0, sizeof(*out));
+    out->type = native.f_type;
+    out->bsize = out->iosize = native.f_bsize;
+    out->blocks = native.f_blocks;
+    out->bfree = native.f_bfree;
+    out->bavail = native.f_bavail;
+    out->files = native.f_files;
+    out->ffree = native.f_ffree;
+    out->fsid = native.f_fsid;
+    return 0;
+}
+long long strtoq(const char *text, char **end, int base) {
+    const char *p = text;
+    unsigned long long value = 0, limit = 0x7fffffffffffffffULL;
+    int negative = 0, digit, any = 0, overflow = 0;
+    while (isspace((unsigned char)*p)) p++;
+    if (*p == '-' || *p == '+') negative = *p++ == '-';
+    if (base && (base < 2 || base > 36)) {
+        errno = EINVAL;
+        if (end) *end = (char *)text;
+        return 0;
+    }
+    if ((base == 0 || base == 16) && p[0] == '0' && (p[1] == 'x' || p[1] == 'X') && isxdigit((unsigned char)p[2])) {
+        base = 16; p += 2;
+    }
+    if (!base) base = *p == '0' ? 8 : 10;
+    if (negative) limit++;
+    for (;; p++) {
+        unsigned char c = *p;
+        digit = c >= '0' && c <= '9' ? c - '0' :
+                c >= 'a' && c <= 'z' ? c - 'a' + 10 :
+                c >= 'A' && c <= 'Z' ? c - 'A' + 10 : 36;
+        if (digit >= base) break;
+        any = 1;
+        if (value > (limit - digit) / base) overflow = 1;
+        else value = value * base + digit;
+    }
+    if (end) *end = (char *)(any ? p : text);
+    if (overflow) { errno = ERANGE; value = limit; }
+    return negative ? (long long)(0ULL - value) : (long long)value;
+}
+
+@interface DR2CRuntime : NSObject
+@end
+@implementation DR2CRuntime
++ (void)load { DR2InitializeCABI(); }
+@end

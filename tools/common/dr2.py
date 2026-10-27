@@ -6,8 +6,19 @@ from pathlib import PurePosixPath
 from . import macho, require
 from .patch_macho import dylib_command, rewrite_libraries
 
+WRAPPED_FUNCTIONS = {
+    "fopen", "fdopen", "fclose", "fread", "fwrite", "fprintf", "fputc", "fputs",
+    "setbuf", "stat", "fstat", "connect",
+}
+
 PAGE_SIZE = 4096
 LC_SYMTAB = 2
+LC_DYSYMTAB = 11
+INDIRECT_SYMBOL_SPECIAL = 0xC0000000
+RELOCATION_EXTERNAL = 0x08000000
+RELOCATION_SCATTERED = 0x80000000
+SYMBOL_INDEX_MASK = 0x00FFFFFF
+RELOCATION = struct.Struct("<2I")
 N_TYPE = 0x0E
 N_UNDF = 0
 N_PBUD = 0x0C
@@ -111,7 +122,66 @@ def patch_image(data, destination, frameworks=(), wrapped_functions=()):
     file_size = len(data) - file_offset
     macho.UINT32.pack_into(data, linkedit + 36, file_size)
     macho.UINT32.pack_into(data, linkedit + 28, macho.align_up(file_size, PAGE_SIZE))
+    sort_undefined_symbols(data)
     return data
+
+
+def sort_undefined_symbols(data):
+    """Keep dyld's sorted imports and all their symbol indexes in agreement."""
+    symtab = dynamic = None
+    for kind, _, command in load_commands(data):
+        if kind == LC_SYMTAB:
+            symtab = struct.unpack_from("<4I", command, 8)
+        elif kind == LC_DYSYMTAB:
+            dynamic = struct.unpack_from("<18I", command, 8)
+    if dynamic is None:
+        return
+    require(symtab is not None, "Missing symbol table.")
+    symoff, _, stroff, strsize = symtab
+    first, count = dynamic[4:6]
+    strings = data[stroff : stroff + strsize]
+    entries = []
+    for index in range(first, first + count):
+        offset = symoff + index * NLIST.size
+        entry = bytes(data[offset : offset + NLIST.size])
+        name_offset = macho.UINT32.unpack_from(entry)[0]
+        name = strings[name_offset : strings.index(0, name_offset)]
+        entries.append((name, index, entry))
+    entries.sort(key=lambda entry: entry[0])
+    indexes = {old: first + index for index, (_, old, _) in enumerate(entries)}
+    for index, (_, _, entry) in enumerate(entries):
+        offset = symoff + (first + index) * NLIST.size
+        data[offset : offset + NLIST.size] = entry
+
+    indirect_offset, indirect_count = dynamic[12:14]
+    for offset in range(indirect_offset, indirect_offset + indirect_count * macho.UINT32.size, macho.UINT32.size):
+        index = macho.UINT32.unpack_from(data, offset)[0]
+        if not index & INDIRECT_SYMBOL_SPECIAL:
+            macho.UINT32.pack_into(data, offset, indexes.get(index, index))
+
+    relocations = set()
+    external_offset, external_count = dynamic[14:16]
+    relocations.update(range(external_offset, external_offset + external_count * RELOCATION.size, RELOCATION.size))
+    for section in macho.MachO(data).sections:
+        relocations.update(range(
+            section.relocation_offset,
+            section.relocation_offset + section.relocation_count * RELOCATION.size,
+            RELOCATION.size,
+        ))
+    for offset in relocations:
+        address, info = RELOCATION.unpack_from(data, offset)
+        if address & RELOCATION_SCATTERED or not info & RELOCATION_EXTERNAL:
+            continue
+        index = info & SYMBOL_INDEX_MASK
+        info = (info & ~SYMBOL_INDEX_MASK) | indexes.get(index, index)
+        macho.UINT32.pack_into(data, offset + macho.UINT32.size, info)
+
+    references_offset, references_count = dynamic[10:12]
+    for offset in range(references_offset, references_offset + references_count * macho.UINT32.size, macho.UINT32.size):
+        reference = macho.UINT32.unpack_from(data, offset)[0]
+        index = reference & SYMBOL_INDEX_MASK
+        reference = (reference & ~SYMBOL_INDEX_MASK) | indexes.get(index, index)
+        macho.UINT32.pack_into(data, offset, reference)
 
 
 def full_size_icon(data):
