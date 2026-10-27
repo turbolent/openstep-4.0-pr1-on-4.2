@@ -1,10 +1,11 @@
-# OPENSTEP 4.0 PR1 apps on OPENSTEP 4.2
+# OPENSTEP PR1 and Rhapsody DR2 apps on OPENSTEP 4.2
 
 This project ports the Dock, Viewer, and MailViewer from OPENSTEP 4.0 Pre-release 1 (PR1) to OPENSTEP 4.2 for Intel.
+It also includes a port of MailViewer from Rhapsody Developer Release 2 (DR2).
 The builders patch the original executables and add compatibility helpers compiled from the included source.
 The Dock comes from PR1's `Workspace.app`.
 
-The builders create patched app bundles and installation archives from stock PR1 apps and frameworks.
+The builders create patched app bundles and installation archives from stock apps and frameworks.
 
 ## Usage
 
@@ -37,3 +38,17 @@ These commands create `DockPR1.app`, `ViewerPR1.app`, and `MailViewerPR1.app` in
 
 The default OPENSTEP paths are `/me/Apps/DockPR1.app`, `/me/Apps/ViewerPR1.app`, and `/me/Apps/MailViewerPR1.app`.
 Use `--install-path` to embed a different OPENSTEP app path when building.
+
+For DR2 MailViewer, prepare the app from an extracted DR2 system tree:
+
+```sh
+dr2="/path/to/DR2"
+
+python3 -B tools/build.py mailviewer-dr2 \
+  --source "$dr2/System/Applications/MailViewer.app" \
+  --frameworks "$dr2/System/Library" \
+  --output "$out/MailViewerDR2.app" \
+  --install-path /LocalApps/MailViewerDR2.app
+```
+
+Then [install the archive and compile its compatibility source on OPENSTEP 4.2](tools/MailViewerDR2/README.md#usage).

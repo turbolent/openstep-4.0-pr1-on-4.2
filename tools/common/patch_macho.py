@@ -1,4 +1,4 @@
-"""Mach-O edits shared by PR1 ports; keep section addresses and offsets intact."""
+"""Shared Mach-O edits that preserve section addresses and offsets."""
 
 from . import macho, require
 from .macho import MachO

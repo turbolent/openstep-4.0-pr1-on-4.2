@@ -17,7 +17,7 @@ from tools.common import (
     macho,
     require,
 )
-from tools.common.pr1_macho import rewrite_libraries
+from tools.common.patch_macho import rewrite_libraries
 
 from .prepare import ALIASES, DEFAULT_INSTALL_PATH, inputs, install_path, prepare_bundle
 

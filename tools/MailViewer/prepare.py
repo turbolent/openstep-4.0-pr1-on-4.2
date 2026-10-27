@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 
 from tools.common import EXECUTABLE_MODE, macho, require
 from tools.common.macho import MachO
-from tools.common.pr1_macho import (
+from tools.common.patch_macho import (
     add_app_icon,
     dylib_command,
     intel_slice,

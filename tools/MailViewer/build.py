@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 from tools.common import EXECUTABLE_MODE, FILE_MODE, TAR_NAME_SIZE, macho, require
-from tools.common.pr1_macho import rewrite_libraries
+from tools.common.patch_macho import rewrite_libraries
 
 from .prepare import DEFAULT_INSTALL_PATH, inputs, install_path, prepare_bundle
 
