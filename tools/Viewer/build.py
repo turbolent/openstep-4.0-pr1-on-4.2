@@ -23,7 +23,7 @@ from .prepare import ALIASES, DEFAULT_INSTALL_PATH, inputs, install_path, prepar
 
 # Helpers compiled from this repository's sources on OPENSTEP 4.2 Intel.
 HELPER_SHA256 = {
-    "ViewerCompat.dylib": "0e76aa2acee34f75b28f918d1c448530577f0de3807cccf8f43e22a76c8dd9bd",
+    "ViewerCompat.dylib": "c13d5f18a70b729e7419bfc2f3f2ac9f1de404063396e97bd7d73d9bcb44eb9a",
     "ToolCompat.dylib": "ac5cb6d4ae4f460a9eeccc25b1772c71ef2be84b7aa59b267f7b879ea9e625f8",
     "OpenItem": "0644daff96a6c7493ce45dc93f7cf1d65c684633833f73d2d068ab7453b3f81b",
 }

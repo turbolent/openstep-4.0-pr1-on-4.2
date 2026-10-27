@@ -14,7 +14,8 @@ NSString *NSFilenamePboardType = @"NeXT filename pasteboard type";
 - perform:(SEL)selector { return [self performSelector:selector]; }
 @end
 
-/* PR1's delayed toolbar help uses removed NSHelpPanel internals. */
+/* Native tooltips replace this callback. Keep the guard in the app module so
+ * dyld binds it before PR1's help module imports the removed NSHelpPanel. */
 @interface NSViewBubbleHelper : NSObject
 @end
 @implementation NSViewBubbleHelper (PR142Compatibility)

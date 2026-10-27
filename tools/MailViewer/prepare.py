@@ -174,17 +174,4 @@ def prepare_bundle(source, message, nextapps, output, destination=DEFAULT_INSTAL
     )
     for name in ("Info.plist", "Info-nextstep.plist"):
         (output / "Resources" / name).write_bytes(info)
-    # Leave mail collection opt-in on first launch. Existing user preferences
-    # and command-line overrides retain their normal precedence.
-    for defaults in (
-        output / "Resources/mailviewer.defaults",
-        output / "Resources/Message.defaults",
-        output / "Message.framework/Resources/Message.defaults",
-    ):
-        data = defaults.read_bytes()
-        require(
-            data.count(b"AutoFetch = Yes;") == 1,
-            "Unexpected AutoFetch registration default.",
-        )
-        defaults.write_bytes(data.replace(b"AutoFetch = Yes;", b"AutoFetch = No;"))
     return output

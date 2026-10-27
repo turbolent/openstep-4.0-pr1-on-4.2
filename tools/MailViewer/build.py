@@ -16,7 +16,7 @@ from .prepare import DEFAULT_INSTALL_PATH, inputs, install_path, prepare_bundle
 
 # Helper compiled on OPENSTEP 4.2 Intel, 2026-10-26.
 HELPER_SHA256 = {
-    "MailViewerCompat.dylib": "728a89de6380bb3a62bfd81b53860d5b8ce154ddd2bd76cd228e2f663f57ef49",
+    "MailViewerCompat.dylib": "1e01cac2104353ad0f8f150ac995e830d3d18c9760eb6f3f0b285356c6758448",
 }
 
 

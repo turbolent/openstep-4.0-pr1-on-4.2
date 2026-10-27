@@ -1,6 +1,30 @@
 #import <AppKit/AppKit.h>
 #include <stdarg.h>
 
+/* OPENSTEP 4.2 implements cell tooltips but omits them from NSMatrix.h. */
+@interface NSMatrix (OpenStep42ToolTips)
+- (void)setToolTip:(NSString *)text forCell:(NSCell *)cell;
+@end
+
+/* Register PR1 help with AppKit instead of its obsolete bubble helpers. */
+@interface NSView (PR1ToolTipCompatibility)
+- (void)registerHelpText:(NSString *)text;
+- (void)unregisterHelpText;
+@end
+@implementation NSView (PR1ToolTipCompatibility)
+- (void)registerHelpText:(NSString *)text { [self setToolTip:text]; }
+- (void)unregisterHelpText { [self setToolTip:nil]; }
+@end
+
+@interface NSMatrix (PR1ToolTipCompatibility)
+- (void)registerHelpText:(NSString *)text forCell:(NSCell *)cell;
+@end
+@implementation NSMatrix (PR1ToolTipCompatibility)
+- (void)registerHelpText:(NSString *)text forCell:(NSCell *)cell {
+    [self setToolTip:text forCell:cell];
+}
+@end
+
 @interface NSString (PR1StringCompatibility)
 - (NSString *)substringFromRange:(NSRange)range;
 @end

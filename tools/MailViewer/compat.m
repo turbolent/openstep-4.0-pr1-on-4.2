@@ -133,7 +133,8 @@ static BOOL MailDirectory(NSString *path) {
 }
 @end
 
-/* PR1's delayed toolbar popup uses removed NSHelpPanel internals. */
+/* Native tooltips replace this callback. Keep the guard in the app module so
+ * dyld binds it before PR1's help module imports the removed NSHelpPanel. */
 @interface NSViewBubbleHelper : NSObject
 @end
 @implementation NSViewBubbleHelper (MailViewer42Compatibility)
