@@ -1,7 +1,8 @@
-# OPENSTEP PR1 and Rhapsody DR2 apps on OPENSTEP 4.2
+# OPENSTEP PR1, Rhapsody DR2, and Tiger apps on OPENSTEP 4.2
 
 This project ports the Dock, Viewer, and MailViewer from OPENSTEP 4.0 Pre-release 1 (PR1) to OPENSTEP 4.2 for Intel.
 It also ports Viewer, MailViewer, and Stickies from Rhapsody Developer Release 2 (DR2).
+It also ports Terminal from Intel Mac OS X Tiger.
 The builders patch the original executables and add compatibility helpers compiled from the included source.
 The Dock comes from PR1's `Workspace.app`.
 
@@ -66,3 +67,25 @@ Install each archive and compile its compatibility source on OPENSTEP 4.2
 as described for [Viewer](tools/ViewerDR2/README.md#usage),
 [MailViewer](tools/MailViewerDR2/README.md#usage),
 and [Stickies](tools/StickiesDR2/README.md#usage).
+
+Prepare Terminal from Intel Tiger 10.4.1 build 8B1025. The builder verifies this
+specific executable; the retail Tiger DVD's PowerPC-only Terminal is unsupported.
+Install the Python dependencies before building:
+
+```sh
+tiger="/path/to/Tiger-10.4.1-8B1025"
+
+python3 -m pip install -r tools/TerminalTiger/requirements.txt
+python3 -B tools/build.py terminal-tiger \
+  --source "$tiger/Applications/Utilities/Terminal.app" \
+  --output "$out/TerminalTiger" \
+  --runtime-directory /LocalApps/TerminalTiger
+```
+
+This creates `TerminalTiger.app`, compatibility source, and
+`TerminalTiger-source-bundle.tar.gz` inside `$out/TerminalTiger`.
+Extract the archive into `/LocalApps/TerminalTiger` on OPENSTEP and run
+`sh build-on-openstep.sh` there with the native compiler, then open
+`TerminalTiger.app` in Workspace. The runtime directory is embedded in the app;
+rebuild with a different `--runtime-directory` to relocate it.
+See [Tiger Terminal](tools/TerminalTiger/README.md) for build and installation instructions.
