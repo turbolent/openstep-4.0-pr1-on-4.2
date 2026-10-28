@@ -228,7 +228,7 @@ def generate(resources, output, names=('Terminal','Term','Find','Preferences','C
         directory=Path(resources)/'English.lproj'/(name+'.nib')
         if (directory/'objects.nib').exists():source.append(generate_nib(directory/'objects.nib', name))
         else:
-            from .keyednib import generate_keyed
+            from tools.common.keyednib import generate_keyed
             source.append(generate_keyed(directory/'keyedobjects.nib',name))
     source.append('BOOL TigerLoadNib(NSString *name,id owner) {')
     for name in names:

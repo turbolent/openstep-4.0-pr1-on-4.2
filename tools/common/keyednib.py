@@ -1,10 +1,18 @@
-"""Translate Tiger keyed interface archives into native AppKit construction."""
+"""Translate keyed interface archives for the Terminal ports into native AppKit construction."""
 import plistlib
 import re
+import json
 
 
-def generate_keyed(path,name):
-    from .nibgen import string
+def string(value):
+    value = value or ''
+    if any(ord(c) >= 127 or ord(c) < 32 for c in value):
+        encoded = ''.join('\\%03o' % b for b in value.encode('utf-8'))
+        return '[[[NSString alloc] initWithCString:"%s" encoding:4] autorelease]' % encoded
+    return '@' + json.dumps(value)
+
+
+def generate_keyed(path,name,standalone_menus=False):
     archive=plistlib.loads(path.read_bytes())
     objects=archive['$objects']
     def deref(value):
@@ -33,12 +41,17 @@ def generate_keyed(path,name):
         return 'NSMakeRect(%g,%g,%g,%g)'%tuple(values) if len(values)==4 else 'NSZeroRect'
     root=deref(archive['$top']['IB.objectdata'])
     owner=root['NSRoot'].data
-    source=['static BOOL TigerNib_%s(id owner) {'%name,'id o[%d]; unsigned i; memset(o,0,sizeof(o));'%len(objects)]
+    source=['static BOOL TigerNib_%s(id owner) {'%name,'id o[%d]; unsigned i,j; memset(o,0,sizeof(o));'%len(objects)]
     attach,settings,connections=[],[],[]
     popup_cells={}
     for i,obj in enumerate(objects):
         if cls(obj)=='NSPopUpButton':popup_cells[obj['NSCell'].data]=i
     popup_menus={objects[cell]['NSMenu'].data:button for cell,button in popup_cells.items()}
+    menu_roles = []
+    if standalone_menus:
+        for i,obj in enumerate(objects):
+            if cls(obj)=='NSMenu' and i not in popup_menus:
+                source.append('o[%d]=[[NSMenu alloc] initWithTitle:%s];' % (i,string(text(obj.get('NSTitle')))))
     cells={'NSButtonCell','NSTextFieldCell','NSTableHeaderCell','NSPopUpButtonCell','NSSliderCell'}
     views={'NSView','NSCustomView','NSClassSwapper','NSButton','NSTextField','NSPopUpButton','NSMatrix','NSTabView','NSScrollView','NSClipView','NSTableView','NSTableHeaderView','NSScroller','NSColorWell','NSSlider','NSBox','_NSCornerView'}
     for i,obj in enumerate(objects):
@@ -50,7 +63,8 @@ def generate_keyed(path,name):
             source.append('%s=owner;'%dest); continue
         if kind=='NSCustomObject':
             name_=text(obj.get('NSClassName'))
-            value='nil' if name_=='FirstResponder' else '[[NSClassFromString(%s) alloc] init]'%string(name_)
+            value={'FirstResponder':'nil','NSApplication':'NSApp','NSFontManager':'[NSFontManager sharedFontManager]'}.get(name_)
+            if value is None:value='[[NSClassFromString(%s) alloc] init]'%string(name_)
             source.append('%s=%s;'%(dest,value))
         elif kind=='NSFont':
             source.append('%s=[[NSFont fontWithName:%s size:%g] retain]; if(!%s)%s=[[NSFont systemFontOfSize:%g] retain];'%(dest,string(text(obj.get('NSName'))),obj.get('NSSize',13),dest,dest,obj.get('NSSize',13)))
@@ -149,6 +163,16 @@ def generate_keyed(path,name):
                     attach.append('[%s addItemWithTitle:%s]; %s=[(id)[%s lastItem] retain]; [%s setTag:%d];'%(button,string(text(definition.get('NSTitle'))),ref(item),button,ref(item),definition.get('NSTag',0)))
                 cell=objects[objects[popup_menus[i]]['NSCell'].data]
                 if cell.get('NSSelectedIndex',-1)>=0:settings.append('[%s selectItemAtIndex:%d];'%(button,cell['NSSelectedIndex']))
+            elif standalone_menus:
+                for item in array(obj.get('NSMenuItems')):
+                    definition=deref(item)
+                    title='-' if definition.get('NSIsSeparator') else text(definition.get('NSTitle'))
+                    attach.append('%s=[(id)[%s addItemWithTitle:%s action:NULL keyEquivalent:%s] retain];' % (ref(item),dest,string(title),string(text(definition.get('NSKeyEquiv')))))
+                    attach.append('[%s setTag:%d]; [%s setKeyEquivalentModifierMask:%d];' % (ref(item),definition.get('NSTag',0),ref(item),definition.get('NSKeyEquivModMask',0)))
+                    if definition.get('NSSubmenu'):
+                        settings.append('[%s setSubmenu:%s forItem:%s];' % (dest,ref(definition['NSSubmenu']),ref(item)))
+                role={'_NSMainMenu':'setMainMenu','_NSServicesMenu':'setServicesMenu','_NSWindowsMenu':'setWindowsMenu'}.get(text(obj.get('NSName')))
+                if role:menu_roles.append('[NSApp %s:%s];' % (role,dest))
             else:raise ValueError('Unowned keyed menu in '+name)
     for connector in array(root.get('NSConnections'))+array(root.get('NSAccessibilityConnectors')):
         item=deref(connector); kind=cls(item)
@@ -159,7 +183,7 @@ def generate_keyed(path,name):
         elif kind=='NSNibAXAttributeConnector':
             connections.append('[%s accessibilitySetOverrideValue:%s forAttribute:%s];'%(ref(item.get('AXDestinationArchiveKey')),string(text(item.get('AXAttributeValueArchiveKey'))),string(text(item.get('AXAttributeTypeArchiveKey')))))
         else:raise ValueError('Unsupported keyed connector '+kind)
-    source.extend(attach); source.extend(settings); source.extend(connections)
-    source.append('for(i=1;i<%d;i++) if(o[i] && [o[i] respondsToSelector:@selector(awakeFromNib)]) [o[i] awakeFromNib];'%len(objects))
+    source.extend(attach); source.extend(settings); source.extend(connections); source.extend(menu_roles)
+    source.append('for(i=1;i<%d;i++) { for(j=1;j<i;j++) if(o[j]==o[i]) break; if(j==i && o[i] && (o[i]!=NSApp || owner==NSApp) && [o[i] respondsToSelector:@selector(awakeFromNib)]) [o[i] awakeFromNib]; }'%len(objects))
     source.append('return YES;\n}')
     return '\n'.join(source)
