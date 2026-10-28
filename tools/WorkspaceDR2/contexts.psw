@@ -1,0 +1,23 @@
+#include <AppKit/psops.h>
+
+/* CDPid is entry zero in OPENSTEP's windowPackage context data. */
+defineps DR2ActiveProcess(| int *context, *pid)
+    currentactiveapp dup context
+    0 /currentContextData winexec pid
+endps
+
+defineps DR2WindowProcess(int window | int *context, *pid)
+    % A window may close after the caller enumerates it.
+    mark {
+        window currentowner dup 0 /currentContextData winexec
+    } stopped {
+        cleartomark 0 0
+    } {
+        3 -1 roll pop
+    } ifelse
+    pid context
+endps
+
+defineps DR2ContextProcess(int context | int *pid)
+    context 0 /currentContextData winexec pid
+endps

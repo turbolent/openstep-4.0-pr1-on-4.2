@@ -15,6 +15,7 @@ def main():
         "mailviewer-dr2",
         "stickies-dr2",
         "viewer-dr2",
+        "workspace-dr2",
         "terminal-tiger",
     )
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
@@ -34,6 +35,8 @@ def main():
         from tools.MailViewerDR2.build import main as build_main
     elif target == "viewer-dr2":
         from tools.ViewerDR2.build import main as build_main
+    elif target == "workspace-dr2":
+        from tools.WorkspaceDR2.build import main as build_main
     elif target == "terminal-tiger":
         from tools.TerminalTiger.build import main as build_main
     else:

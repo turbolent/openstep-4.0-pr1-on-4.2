@@ -72,7 +72,11 @@ def load_commands(data):
         offset += size
 
 
-def patch_image(data, destination, frameworks=(), wrapped_functions=()):
+def patch_image(
+    data, destination, frameworks=(), wrapped_functions=(), symbol_replacements=None
+):
+    aliases = {"_" + name: "_DR2" + name for name in wrapped_functions}
+    aliases.update(symbol_replacements or {})
     replacements = {}
     for kind, _, command in load_commands(data):
         if kind not in (macho.LC_LOAD_DYLIB, macho.LC_ID_DYLIB):
@@ -111,10 +115,9 @@ def patch_image(data, destination, frameworks=(), wrapped_functions=()):
         offset = symoff + index * NLIST.size
         string_index, kind, *_ = NLIST.unpack_from(data, offset)
         name = strings[string_index:].split(b"\0", 1)[0].decode("latin1")
-        if kind & N_TYPE in (N_UNDF, N_PBUD) and name[1:] in wrapped_functions:
-            require(name.startswith("_"), "Unexpected C symbol: " + name)
+        if kind & N_TYPE in (N_UNDF, N_PBUD) and name in aliases:
             macho.UINT32.pack_into(data, offset, len(strings))
-            strings.extend(("_DR2" + name[1:]).encode("ascii") + b"\0")
+            strings.extend(aliases[name].encode("ascii") + b"\0")
     new_offset = len(data)
     data.extend(strings)
     struct.pack_into("<2I", data, symtab + 16, new_offset, len(strings))
