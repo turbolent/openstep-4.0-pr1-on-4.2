@@ -75,6 +75,10 @@ as described for [Workspace](tools/WorkspaceDR2/README.md#usage),
 [MailViewer](tools/MailViewerDR2/README.md#usage),
 and [Stickies](tools/StickiesDR2/README.md#usage).
 
+The [DR2 framework runtime](tools/common/dr2-runtime/README.md)
+packages Stickies, Viewer, and MailViewer with DR2's original AppKit, Foundation, fonts, and private services.
+The generated app bundles open directly from Workspace.
+
 Prepare Terminal from Intel Tiger 10.4.1 build 8B1025. The builder verifies this
 specific executable; the retail Tiger DVD's PowerPC-only Terminal is unsupported.
 Install the Python dependencies before building:

@@ -73,7 +73,8 @@ def load_commands(data):
 
 
 def patch_image(
-    data, destination, frameworks=(), wrapped_functions=(), symbol_replacements=None
+    data, destination, frameworks=(), wrapped_functions=(), symbol_replacements=None,
+    library_paths=None, compatibility_library=COMPATIBILITY_LIBRARY,
 ):
     aliases = {"_" + name: "_DR2" + name for name in wrapped_functions}
     aliases.update(symbol_replacements or {})
@@ -89,11 +90,13 @@ def patch_image(
             "Unexpected dependency: " + old,
         )
         base = "/NextLibrary/Frameworks" if name in SYSTEM_FRAMEWORKS else destination
-        replacements[old] = base + "/" + name + ".framework/" + name
+        replacements[old] = (library_paths or {}).get(
+            name, base + "/" + name + ".framework/" + name
+        )
     data = bytearray(
         rewrite_libraries(
             data, replacements,
-            [dylib_command(destination + "/" + COMPATIBILITY_LIBRARY)],
+            [dylib_command(destination + "/" + compatibility_library)],
         )
     )
     symtab = linkedit = None

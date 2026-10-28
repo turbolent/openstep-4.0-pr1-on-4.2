@@ -1,5 +1,9 @@
 /* C runtime layouts and entry points used by DR2 Intel binaries. */
+#ifdef DR2_FRAMEWORK_RUNTIME
+#import <Foundation/Foundation.h>
+#else
 #import <AppKit/AppKit.h>
+#endif
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -14,6 +18,7 @@
 
 /* Both Intel handler structures reserve a jump buffer and four words.
  * DR2 accesses those words only through these three entry points. */
+#ifndef DR2_FRAMEWORK_RUNTIME
 void _NSAddHandler2(NSHandler *handler) {
     _NSAddHandler(handler);
 }
@@ -23,6 +28,7 @@ void _NSRemoveHandler2(NSHandler *handler) {
 id _NSExceptionObjectFromHandler2(NSHandler *handler) {
     return _NSExceptionObjectFromHandler(handler);
 }
+#endif
 
 enum {
     DR2RuneCount = 256,

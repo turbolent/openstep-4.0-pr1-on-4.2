@@ -16,6 +16,7 @@ def main():
         "stickies-dr2",
         "viewer-dr2",
         "workspace-dr2",
+        "runtime-dr2",
         "terminal-tiger",
     )
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
@@ -37,6 +38,8 @@ def main():
         from tools.ViewerDR2.build import main as build_main
     elif target == "workspace-dr2":
         from tools.WorkspaceDR2.build import main as build_main
+    elif target == "runtime-dr2":
+        from tools.common.build_runtime_dr2 import main as build_main
     elif target == "terminal-tiger":
         from tools.TerminalTiger.build import main as build_main
     else:
