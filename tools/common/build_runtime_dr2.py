@@ -28,15 +28,29 @@ FRAMEWORK_HASHES = {
     "Message": "fab91dc2ad510b055c4722e938b0ab728c764b1e35f6b12f7e92af83e5ac305a",
     "MailViewer": "d17db3fe9ef693b0c7ce6f03d3288cce4ca291bcc6bf9962ea3be23b405b8213",
     "HTML": "0ee4566910c674608b81e78fa1e078f0008fd3fc8d8c28d9ee92aa920e484cb3",
+    "ProjectBuilder": "9ec0e093716311440b62fcf9f877f1caa68bf32f87dc0afe313ddb49273b6db7",
+    "PBDevKit": "0ab367532953a0b47777795fd68c2e493ca79027ce61002aa7b1094b521aee3c",
+    "PBRuntime": "c860735a5b68f2f3d0b754ab8fe0c68a9d39ae29bbd8f852a0bdc0da4f79f5b1",
 }
-PRIVATE_FRAMEWORKS = {"AppSupport", "MailViewer", "HTML"}
-FRAMEWORK_VERSIONS = {"AppKit": "C", "Foundation": "C", "HTML": "A"}
+PRIVATE_FRAMEWORKS = {"AppSupport", "MailViewer", "HTML", "PBDevKit", "PBRuntime"}
+FRAMEWORK_VERSIONS = {
+    "AppKit": "C",
+    "Foundation": "C",
+    "HTML": "A",
+    "ProjectBuilder": "A",
+    "PBDevKit": "C",
+    "PBRuntime": "A",
+}
 APP_SUFFIX = "DR2Runtime"
-APP_LIBRARIES = {"Viewer": "ViewerRuntime.dylib"}
+APP_LIBRARIES = {
+    "Viewer": "ViewerRuntime.dylib",
+    "ProjectBuilder": "ProjectBuilderRuntime.dylib",
+}
 APP_HASHES = {
     "Stickies": "5584032789ee99c7d46ae27e1c53de1d226bcc5ab42355444ca3607a82a8251e",
     "Viewer": "9400d39d055c6841af250f50b64193ea3d24629b712b88194da974a5b3b34790",
     "MailViewer": "ee3dc00e5d408484ffb7879449d3d2d554f1546f4a22e1ef99f24a03a8edcd90",
+    "ProjectBuilder": "b6bf4b583373abefb54de1f451cb5cc27854ebf8aaa40513e2199ff899f7099f",
 }
 VIEWER_PRIVATE_NAMES = {
     b"apps5_1.ppl": b"appsDRT.ppl",
@@ -90,6 +104,8 @@ X86_RETURN = b"\xc3"
 X86_PUSH_FRAME_POINTER = b"\x55"
 STICKIES_DATABASE = b".StickiesDatabase"
 RUNTIME_STICKIES_DATABASE = b".StickiesDR2Stack"
+PROJECT_BUILDER_DEBUGGER = b'Debugger = "/usr/bin/gdb"'
+NATIVE_DEBUGGER = b'Debugger = "/bin/gdb"'
 
 
 def update_linkedit_size(data, image):
@@ -247,7 +263,7 @@ def adapt_image(data, destination):
     return result
 
 
-def copy_resources(source, target):
+def copy_resources(source, target, destination):
     require(source.is_dir(), "Missing Resources directory: " + str(source))
     shutil.copytree(
         source,
@@ -257,6 +273,37 @@ def copy_resources(source, target):
             for name in names
             if name in RESOURCE_TOOLS or (Path(directory) / name).is_symlink()
         ],
+    )
+    for path in target.rglob("*"):
+        if path.is_file():
+            data = path.read_bytes()
+            if data.startswith((macho.MACH_MAGIC_I386, macho.FAT_MAGIC)):
+                path.write_bytes(adapt_image(data, destination))
+
+
+def prepare_project_builder(root, output, destination):
+    developer = root / "System/Developer"
+    for resource in ("Makefiles/Resources", "PBBundles/PBRTAdaptors"):
+        copy_resources(
+            developer / resource, output / "Developer" / resource, destination
+        )
+    compiler = output / "Developer/Makefiles/Resources/ccSpec.plist"
+    compiler.write_bytes(compiler.read_bytes().replace(b'"/usr/bin/cc"', b'"/bin/cc"'))
+    copy_resources(
+        root / "System/Documentation/Developer/HomePages",
+        output / "Library/Documentation/Developer/HomePages",
+        destination,
+    )
+
+
+def project_builder_defaults(data):
+    require(PROJECT_BUILDER_DEBUGGER in data, "Unexpected Project Builder defaults.")
+    offset = data.index(PROJECT_BUILDER_DEBUGGER)
+    start = data.rfind(b"\0", 0, offset) + 1
+    end = data.index(b"\0", offset)
+    original = data[start:end]
+    return patch_framework_paths(
+        data, {original: original.replace(PROJECT_BUILDER_DEBUGGER, NATIVE_DEBUGGER)}
     )
 
 
@@ -295,9 +342,13 @@ def prepare(root, output, destination, apps):
             replacement = (destination + "/" + framework + ".framework").encode("ascii")
             replacements[original] = replacement
             replacements[original + b"/Resources"] = replacement + b"/Resources"
+        if name == "PBRuntime":
+            replacements[b"/usr/bin/gdb"] = b"/bin/gdb"
         data = patch_framework_paths(data, replacements)
         (target / name).write_bytes(data)
-        copy_resources(source.parent / "Resources", target / "Resources")
+        copy_resources(source.parent / "Resources", target / "Resources", destination)
+    if any(app.stem == "ProjectBuilder" for app in apps):
+        prepare_project_builder(root, output, destination)
     pbs = bytearray(
         adapt_image(
             (root / "System/Library/CoreServices/pbs").read_bytes(), destination
@@ -367,6 +418,8 @@ def prepare(root, output, destination, apps):
             if data.startswith((macho.MACH_MAGIC_I386, macho.FAT_MAGIC)):
                 path.write_bytes(adapt_image(data, destination))
         data = (target / stem).read_bytes()
+        if stem == "ProjectBuilder":
+            data = project_builder_defaults(data)
         if stem == "Stickies":
             require(
                 STICKIES_DATABASE + b"\0" in data, "Unexpected DR2 Stickies notes path."

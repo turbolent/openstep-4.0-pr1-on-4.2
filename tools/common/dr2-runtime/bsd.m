@@ -78,6 +78,10 @@ struct DR2Group *DR2getgrent(void) {
     return convertGroup(getgrent());
 }
 
+DIR *__opendir2(const char *path, int flags) {
+    return opendir(path);
+}
+
 int DR2getdirentries(int fd, char *buffer, unsigned size, long *base) {
     int result = getdirentries(fd, buffer, size, base), offset = 0;
     while (offset < result) {
@@ -174,13 +178,14 @@ unsigned NSGetNextSearchPathEnumeration(unsigned state, char *path) {
                                    "/Network/Developer/Apps", "/NextDeveloper/Apps"};
     const char *admin[] = {"~/Admin", "/LocalAdmin", "/Network/Admin", "/NextAdmin"};
     const char *developer[] = {"~/Developer", "/LocalDeveloper", "/Network/Developer",
-                               "/NextDeveloper", NULL};
+                               DR2_RUNTIME_PATH "/Developer", "/NextDeveloper"};
     const char *value;
     unsigned count = directory == DR2AllApplications ? ApplicationDirectoryCount
                      : directory == DR2AllLibraries  ? LibraryDirectoryCount
                                                      : 1;
     unsigned domainCount = directory == DR2LibraryDirectory || directory == DR2AllLibraries ||
-                                   directory == DR2DocumentationDirectory
+                                   directory == DR2DocumentationDirectory ||
+                                   directory == DR2DeveloperDirectory
                                ? LibraryDomainCount
                                : SearchDomainCount;
     while (cursor < domainCount * count) {

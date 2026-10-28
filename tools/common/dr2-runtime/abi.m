@@ -1,6 +1,12 @@
 #define DR2_FRAMEWORK_RUNTIME
 #include "../dr2-abi.m"
 
+int __swbuf(int value, DR2File *file) {
+    int result = fputc(value, nativeFile(file));
+    updateFile(file);
+    return result;
+}
+
 #include <sys/param.h>
 char *getcwd(char *buffer, unsigned size) {
     char native[MAXPATHLEN];
