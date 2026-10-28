@@ -277,7 +277,9 @@ int ATSUGetGlyphBounds(TigerATSULayout *layout, TigerFixed x, TigerFixed y, unsi
                        unsigned *actual) {
     TigerATSUStyle *style = tigerStyleAt(layout, start);
     float w = tigerTextWidth(layout, start, length);
-    float left = Fix2X(x), top = Fix2X(y) + [style->font ascender],
+    /* Bounds stay relative to the line origin, even for a partial selection. */
+    float left = Fix2X(x) + tigerTextWidth(layout, 0, start),
+          top = Fix2X(y) + [style->font ascender],
           bottom = Fix2X(y) + [style->font descender];
     if (actual)
         *actual = 1;

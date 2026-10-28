@@ -101,6 +101,9 @@ def main():
     unit='#import <AppKit/AppKit.h>\n#import <objc/objc-class.h>\n'
     unit+='\n'.join((directory/name).read_text() for name in ('core.m','struct-return.m','abi.m','unicode.m','network.m','scripting.m','tests/native-unit.m'))
     (args.output/'native-unit.m').write_text(unit,encoding='ascii',newline='\n')
+    bounds_test='\n'.join((directory/name).read_text() for name in
+                          ('graphics.m','atsui.m','tests/atsui-bounds.m'))
+    (args.output/'atsui-bounds.m').write_text(bounds_test,encoding='ascii',newline='\n')
     shell_test=(directory/'abi.m').read_text()+'\n'+(directory/'tests/shell-pty.m').read_text()
     (args.output/'shell-pty.m').write_text(shell_test,encoding='ascii',newline='\n')
     app=args.output/'TerminalTiger.app'
@@ -141,7 +144,7 @@ chmod +x TerminalTiger.app/TerminalTiger
         info.mtime=int(info.mtime)
         return info
     with tarfile.open(args.output/'TerminalTiger-source-bundle.tar.gz','w:gz',format=tarfile.GNU_FORMAT) as archive:
-        for name in ('TerminalTiger.app','compat.m','build-on-openstep.sh','manifest.json','native-unit.m','shell-pty.m','terminal-fixture.c','README.md'):
+        for name in ('TerminalTiger.app','compat.m','build-on-openstep.sh','manifest.json','native-unit.m','atsui-bounds.m','shell-pty.m','terminal-fixture.c','README.md'):
             archive.add(args.output/name,arcname=name,filter=archive_permissions)
     print('Prepared compatibility bundle:',args.output)
     print('Unimplemented imports:',len(unresolved))
