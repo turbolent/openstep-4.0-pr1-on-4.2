@@ -39,3 +39,8 @@ open "$app"
 
 Choose a writable parent directory that already exists.
 The app is ready to launch after compilation succeeds.
+
+Install a current `ViewerDR2.app` beside `WorkspaceDR2.app` to use Viewer's
+original Processes panel and the Show App in Viewer command.
+Workspace launches Viewer when needed.
+Without the companion app, Show Processes uses Workspace's own panel.

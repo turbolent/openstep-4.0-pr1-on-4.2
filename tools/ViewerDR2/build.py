@@ -12,11 +12,11 @@ from .prepare import APP_NAME, BUNDLE_NAME, inputs, install_path, prepare_bundle
 def build(source, appsupport, output, archive, destination):
     directory = Path(__file__).parent
     native = {name: directory / name for name in (
-        "compat.m", "attributes.m", "cache.m", "build-on-openstep.sh",
+        "compat.m", "attributes.m", "desktop.m", "cache.m", "build-on-openstep.sh",
     )}
     for name in (
         "dr2-abi.h", "dr2-abi.m", "dr2-appkit.m", "dr2-paths.m", "dr2-popup.m",
-        "viewer.m", "viewer-tool.m", "viewer-open-item.m",
+        "viewer.m", "viewer-tool.m", "viewer-open-item.m", "dr2-viewer-service.h",
     ):
         native["common/" + name] = directory.parent / "common" / name
     return build_bundle(

@@ -39,3 +39,6 @@ open "$app"
 
 Choose a writable parent directory that already exists.
 The app is ready to launch after compilation succeeds.
+
+Install `WorkspaceDR2.app` in the same parent directory to open Viewer's
+Processes panel and reveal active apps from the Workspace DR2 menu.

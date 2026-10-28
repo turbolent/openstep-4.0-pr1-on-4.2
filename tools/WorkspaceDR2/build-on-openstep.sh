@@ -14,7 +14,7 @@ sed 's,dpsclient/dpsfriends.h,AppKit/dpsfriends.h,' \
 rm "$sources/contexts.raw.c"
 cc -fno-common -dynamiclib -undefined suppress \
     -Wl,-install_name,"$bundle/DR2Compat.dylib",-compatibility_version,1.0,-current_version,1.0 \
-    -o "$bundle/DR2Compat.dylib.new" "$sources/compat.m" "$sources/contexts.c" \
+    -o "$bundle/DR2Compat.dylib.new" "$sources/compat.m" "$sources/viewer.m" "$sources/contexts.c" \
     "$sources/common/dr2-abi.m" "$sources/common/dr2-appkit.m" \
     "$sources/common/dr2-paths.m" -framework AppKit -framework Foundation
 mv "$bundle/DR2Compat.dylib.new" "$bundle/DR2Compat.dylib"

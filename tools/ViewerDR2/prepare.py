@@ -11,6 +11,10 @@ from tools.common.patch_macho import intel_slice, rewrite_libraries
 
 APP_NAME = "ViewerDR2"
 BUNDLE_NAME = APP_NAME + ".app"
+DESKTOP_SERVICE_VERSION = 1
+PROCESS_NAME_BRANCH_ADDRESS = 0x2076
+PROCESS_NAME_ORIGINAL_BRANCH = bytes.fromhex("7531")
+PROCESS_NAME_KEEP_SUPPLIED_NAME = bytes.fromhex("eb3a")
 STOCK_HASHES = {
     "Viewer": "9400d39d055c6841af250f50b64193ea3d24629b712b88194da974a5b3b34790",
     "AppSupport": "ff763cffaaa0a38d8cacc6cc0ad24c942a82393cc95d1af4e5a3cca02428095c",
@@ -74,6 +78,16 @@ def patch_binary(data, name, destination):
             "Unexpected Viewer tool bootstrap code.",
         )
         data[offset : offset + len(TOOL_LAUNCH_ORIGINAL)] = TOOL_LAUNCH_INITIALIZE_FIRST
+    if name == "processes":
+        # The stock panel renames Viewer itself to Workspace Manager.
+        # Keep the application name supplied by the native Workspace instead.
+        offset = macho.MachO(data).offset(PROCESS_NAME_BRANCH_ADDRESS)
+        require(
+            data[offset : offset + len(PROCESS_NAME_ORIGINAL_BRANCH)]
+            == PROCESS_NAME_ORIGINAL_BRANCH,
+            "Unexpected process-panel application-name code.",
+        )
+        data[offset : offset + len(PROCESS_NAME_ORIGINAL_BRANCH)] = PROCESS_NAME_KEEP_SUPPLIED_NAME
     if name.endswith(".tool") or name == "console":
         library = "RuntimeCompat.dylib" if name == "console" else "ToolCompat.dylib"
         data = rewrite_libraries(
@@ -112,6 +126,9 @@ def prepare_bundle(sources, output, destination):
     for key in (b"NSExecutable", b"NSPortName"):
         info = info.replace(key + b" = Viewer;", key + b" = ViewerDR2;")
     info = info.replace(b"in Workspace", b"in Viewer DR2")
+    info = info.replace(
+        b"{", b"{\n    DR2DesktopServiceVersion = %d;" % DESKTOP_SERVICE_VERSION, 1
+    )
     for name in ("Info.plist", "Info-nextstep.plist"):
         (resources / name).write_bytes(info)
     # The native build generates this in OPENSTEP's serialization format.

@@ -11,7 +11,8 @@ sources="$bundle/Compatibility"
 cc -fno-common -dynamiclib -undefined suppress \
     -Wl,-install_name,"$bundle/DR2Compat.dylib",-compatibility_version,1.0,-current_version,1.0 \
     -o "$bundle/DR2Compat.dylib.new" \
-    "$sources/compat.m" "$sources/attributes.m" "$sources/common/dr2-abi.m" \
+    "$sources/compat.m" "$sources/attributes.m" "$sources/desktop.m" \
+    "$sources/common/dr2-abi.m" \
     "$sources/common/dr2-appkit.m" "$sources/common/dr2-paths.m" \
     "$sources/common/dr2-popup.m" -framework AppKit -framework Foundation
 cc -DVIEWER_DR2 -fno-common -dynamiclib -undefined suppress \

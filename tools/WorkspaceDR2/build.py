@@ -13,9 +13,9 @@ def build(source, output, archive, destination):
     directory = Path(__file__).parent
     native = {
         name: directory / name
-        for name in ("compat.m", "contexts.psw", "build-on-openstep.sh")
+        for name in ("compat.m", "viewer.m", "contexts.psw", "build-on-openstep.sh")
     }
-    for name in ("dr2-abi.h", "dr2-abi.m", "dr2-appkit.m", "dr2-paths.m"):
+    for name in ("dr2-abi.h", "dr2-abi.m", "dr2-appkit.m", "dr2-paths.m", "dr2-viewer-service.h"):
         native["common/" + name] = directory.parent / "common" / name
     return build_bundle(
         sources=inputs(source),

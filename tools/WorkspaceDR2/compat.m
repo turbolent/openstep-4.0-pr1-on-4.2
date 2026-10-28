@@ -7,6 +7,10 @@
 #include "contexts.h"
 
 extern NSString *_NXGetWorkspaceName(void);
+extern BOOL WorkspaceDR2HasViewer(void);
+extern BOOL WorkspaceDR2ShowProcesses(void);
+extern BOOL WorkspaceDR2OpenPath(NSString *path);
+extern BOOL WorkspaceDR2RevealPath(NSString *path);
 
 enum {
     WorkspaceTimeoutMilliseconds = 1000,
@@ -159,6 +163,9 @@ static Speaker *workspaceSpeaker(void) {
 - (void)addItem:(id)item {
     [self insertItem:item atIndex:[[self itemArray] count]];
 }
+- (void)removeItemAtIndex:(unsigned)index {
+    [self removeItem:[[self itemArray] objectAtIndex:index]];
+}
 - (void)insertItem:(id)item atIndex:(unsigned)index {
     [self insertItemWithTitle:@"" action:NULL keyEquivalent:@"" atIndex:index];
     [[self itemMatrix] putCell:item atRow:index column:0];
@@ -238,6 +245,8 @@ static DR2StatusItem *applicationsItem;
 - (void)updateMenu;
 - (void)reloadProcesses;
 - (void)showProcessesPanel:(id)sender;
+- (void)showLocalProcesses:(id)sender;
+- (void)revealActiveApp:(id)sender;
 - (void)switchActiveApplication:(id)sender;
 - (void)hideActiveApp:(id)sender;
 - (void)hideOtherApps:(id)sender;
@@ -328,6 +337,9 @@ static void postApplicationEvent(int context, int subtype) {
         } else if (action == @selector(toggleShowAppNames:)) {
             [item setTarget:self];
             [item setTitle:showNames ? @"Hide Active App Name" : @"Show Active App Name"];
+        } else if (action == @selector(revealActiveApp:)) {
+            [item setTarget:self];
+            [item setEnabled:activeApplication != nil && WorkspaceDR2HasViewer()];
         }
     }
     [menu sizeToFit];
@@ -492,6 +504,17 @@ static void postApplicationEvent(int context, int subtype) {
     [[[processBrowser selectedCell] representedObject] activate];
 }
 - (void)showProcessesPanel:(id)sender {
+    if (!WorkspaceDR2ShowProcesses())
+        [self showLocalProcesses:sender];
+}
+- (void)revealActiveApp:(id)sender {
+    if (!activeApplication || !WorkspaceDR2RevealPath([activeApplication path]))
+        NSBeep();
+}
+- (BOOL)application:(NSApplication *)app openFile:(NSString *)path {
+    return WorkspaceDR2OpenPath(path);
+}
+- (void)showLocalProcesses:(id)sender {
     if (!processPanel) {
         NSView *content;
         processPanel =
@@ -552,6 +575,9 @@ int WorkspaceDR2Main(int argc, char **argv) {
     controller = [[NSClassFromString(@"ProcessMenuController") alloc] init];
     menu = [applicationsItem menu];
     [menu setTitle:@"Workspace DR2"];
+    [menu addItemWithTitle:@"Show App in Viewer"
+                    action:@selector(revealActiveApp:)
+             keyEquivalent:@""];
     [[menu addItemWithTitle:@"Quit" action:@selector(terminate:)
               keyEquivalent:@"q"] setTarget:NSApp];
     [NSApp setMainMenu:menu];

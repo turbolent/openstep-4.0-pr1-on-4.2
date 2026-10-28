@@ -9,6 +9,7 @@
 #define ViewerTitle @"Viewer DR2"
 extern void DR2FixSubmenus(void);
 extern void DR2InitializeViewer(void);
+extern void DR2StartViewerDesktop(void);
 extern void DR2RefreshViewerAfterFileOperation(void);
 #else
 #define ViewerTitle @"Viewer PR1"
@@ -341,6 +342,9 @@ static BOOL ViewerOpen(NSString *path, NSString *application) {
     }
     [self activateIgnoringOtherApps:YES];
     [self noteMenusNeedUpdate:nil];
+#ifdef VIEWER_DR2
+    DR2StartViewerDesktop();
+#endif
     NSLog(@"ViewerCompat: ready");
 }
 - (BOOL)application:(NSApplication *)app openFile:(NSString *)path {
