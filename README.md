@@ -1,8 +1,8 @@
-# OPENSTEP PR1, Rhapsody DR2, and Tiger apps on OPENSTEP 4.2
+# OPENSTEP PR1, Rhapsody DR2, and Mac OS X apps on OPENSTEP 4.2
 
 This project ports the Dock, Viewer, and MailViewer from OPENSTEP 4.0 Pre-release 1 (PR1) to OPENSTEP 4.2 for Intel.
 It also ports Viewer, MailViewer, and Stickies from Rhapsody Developer Release 2 (DR2).
-It also ports Terminal from Intel Mac OS X Tiger.
+It also ports Terminal from Intel Mac OS X Tiger and Mac OS X Snow Leopard.
 DR2 Workspace's Applications menu runs as a separate app beside the native Workspace.
 The builders patch the original executables and add compatibility helpers compiled from the included source.
 The Dock comes from PR1's `Workspace.app`.
@@ -100,3 +100,20 @@ Extract the archive into `/LocalApps/TerminalTiger` on OPENSTEP and run
 `TerminalTiger.app` in Workspace. The runtime directory is embedded in the app;
 rebuild with a different `--runtime-directory` to relocate it.
 See [Tiger Terminal](tools/TerminalTiger/README.md) for build and installation instructions.
+
+Prepare Terminal from Mac OS X Snow Leopard 10.6.8:
+
+```sh
+snow="/path/to/Snow-Leopard-10.6.8"
+
+python3 -m pip install -r tools/TerminalSnowLeopard/requirements.txt
+python3 -B tools/build.py terminal-snow-leopard \
+  --source "$snow/Applications/Utilities/Terminal.app" \
+  --output "$out/TerminalSnowLeopard" \
+  --runtime-directory /LocalApps/TerminalSnowLeopard
+```
+
+Extract `TerminalSnowLeopard-source-bundle.tar.gz` into the runtime directory on
+OPENSTEP, run `sh build-on-openstep.sh`, then open `TerminalSnowLeopard.app`.
+Each shell uses a separate window. See [Snow Leopard Terminal](tools/TerminalSnowLeopard/README.md)
+for prerequisites and installation instructions.

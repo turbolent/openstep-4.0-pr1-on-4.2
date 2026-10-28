@@ -318,6 +318,7 @@ int Tigerioctl(int fd, unsigned request, void *argument) {
         request = TIOCSETD;
     return ioctl(fd, request, argument);
 }
+static int (*tigerPTYAvailable)(const char *slave);
 int Tigerforkpty(int *masterOut, char *name, const TigerTermios *settings,
                  const struct winsize *size) {
     int master = -1, pid, slave, tty, pgrp, group, digit;
@@ -327,6 +328,10 @@ int Tigerforkpty(int *masterOut, char *name, const TigerTermios *settings,
         for (digit = 0; digit < 16; digit++) {
             masterName[8] = groups[group];
             masterName[9] = digits[digit];
+            slaveName[8] = groups[group];
+            slaveName[9] = digits[digit];
+            if (tigerPTYAvailable && !tigerPTYAvailable(slaveName))
+                continue;
             master = open(masterName, O_RDWR);
             if (master >= 0)
                 break;

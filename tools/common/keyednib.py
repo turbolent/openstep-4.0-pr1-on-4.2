@@ -12,8 +12,9 @@ def string(value):
     return '@' + json.dumps(value)
 
 
-def generate_keyed(path,name,standalone_menus=False):
-    archive=plistlib.loads(path.read_bytes())
+def generate_keyed(path,name,standalone_menus=False,bindings=False,archive=None,tab_types=None):
+    if archive is None:
+        archive=plistlib.loads(path.read_bytes())
     objects=archive['$objects']
     def deref(value):
         return objects[value.data] if isinstance(value,plistlib.UID) else value
@@ -30,6 +31,22 @@ def generate_keyed(path,name,standalone_menus=False):
         return text(deref(value['$class'])['$classname']) if isinstance(value,dict) and '$class' in value else ''
     def ref(value):
         return 'o[%d]'%value.data if isinstance(value,plistlib.UID) and value.data else 'nil'
+    def literal(value):
+        original=value
+        value=deref(value)
+        if value in (None,'$null'): return 'nil'
+        if isinstance(value,bool): return '[NSNumber numberWithBool:%d]'%value
+        if isinstance(value,int): return '[NSNumber numberWithInt:%d]'%value
+        if isinstance(value,float): return '[NSNumber numberWithDouble:%.17g]'%value
+        if isinstance(value,str): return string(value)
+        if cls(value) in ('NSString','NSMutableString'): return string(text(value))
+        if cls(value) in ('NSDictionary','NSMutableDictionary'):
+            pairs=[]
+            for key,item in zip(value.get('NS.keys',[]),value.get('NS.objects',[])):
+                pairs.extend((literal(item),literal(key)))
+            return '[NSDictionary dictionaryWithObjectsAndKeys:%s]'%', '.join(pairs+['nil'])
+        if cls(value)=='NSNull': return '[NSNull null]'
+        return ref(original)
     def numbers(value):
         return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?',text(value))]
     def size(value):
@@ -43,6 +60,7 @@ def generate_keyed(path,name,standalone_menus=False):
     owner=root['NSRoot'].data
     source=['static BOOL TigerNib_%s(id owner) {'%name,'id o[%d]; unsigned i,j; memset(o,0,sizeof(o));'%len(objects)]
     attach,settings,connections=[],[],[]
+    binding_connections=[]
     popup_cells={}
     for i,obj in enumerate(objects):
         if cls(obj)=='NSPopUpButton':popup_cells[obj['NSCell'].data]=i
@@ -54,6 +72,8 @@ def generate_keyed(path,name,standalone_menus=False):
                 source.append('o[%d]=[[NSMenu alloc] initWithTitle:%s];' % (i,string(text(obj.get('NSTitle')))))
     cells={'NSButtonCell','NSTextFieldCell','NSTableHeaderCell','NSPopUpButtonCell','NSSliderCell'}
     views={'NSView','NSCustomView','NSClassSwapper','NSButton','NSTextField','NSPopUpButton','NSMatrix','NSTabView','NSScrollView','NSClipView','NSTableView','NSTableHeaderView','NSScroller','NSColorWell','NSSlider','NSBox','_NSCornerView'}
+    if bindings:
+        cells.add('NSComboBoxCell'); views.update(('NSComboBox','NSBrowser'))
     for i,obj in enumerate(objects):
         archived_kind=cls(obj)
         kind=text(obj.get('NSOriginalClassName')) if archived_kind=='NSClassSwapper' else archived_kind
@@ -61,7 +81,14 @@ def generate_keyed(path,name,standalone_menus=False):
         dest='o[%d]'%i
         if i==owner:
             source.append('%s=owner;'%dest); continue
-        if kind=='NSCustomObject':
+        if bindings and kind in ('NSArrayController','NSObjectController','NSUserDefaultsController'):
+            if kind=='NSUserDefaultsController' and obj.get('NSSharedInstance'):
+                source.append('%s=[[NSUserDefaultsController sharedUserDefaultsController] retain];'%dest)
+            else: source.append('%s=[[NSClassFromString(%s) alloc] init];'%(dest,string(actual)))
+            if obj.get('NSObjectClassName'):settings.append('[%s setObjectClass:NSClassFromString(%s)];'%(dest,string(text(obj['NSObjectClassName']))))
+            for key,selector in [('NSEditable','setEditable'),('NSAvoidsEmptySelection','setAvoidsEmptySelection'),('NSPreservesSelection','setPreservesSelection'),('NSSelectsInsertedObjects','setSelectsInsertedObjects')]:
+                if key in obj:settings.append('[%s %s:%d];'%(dest,selector,obj[key]))
+        elif kind=='NSCustomObject':
             name_=text(obj.get('NSClassName'))
             value={'FirstResponder':'nil','NSApplication':'NSApp','NSFontManager':'[NSFontManager sharedFontManager]'}.get(name_)
             if value is None:value='[[NSClassFromString(%s) alloc] init]'%string(name_)
@@ -84,8 +111,17 @@ def generate_keyed(path,name,standalone_menus=False):
             source.append('%s=[[NSClassFromString(%s) alloc] initWithContentRect:%s styleMask:%d backing:2 defer:YES];'%(dest,string(text(obj['NSWindowClass'])),rect(obj['NSWindowRect']),(obj.get('NSWindowStyleMask',1)|1)&15))
             source.append('[%s setTitle:%s]; [%s setReleasedWhenClosed:NO];'%(dest,string(text(obj.get('NSWindowTitle'))),dest))
             attach.append('[(NSWindow *)%s setContentView:(NSView *)%s];'%(dest,ref(obj['NSWindowView'])))
+            if bindings and cls(obj.get('NSViewClass'))=='NSToolbar':
+                attach.append('[%s setToolbar:%s];'%(dest,ref(obj['NSViewClass'])))
+        elif bindings and kind=='NSToolbarItem':
+            source.append('%s=[[NSToolbarItem alloc] initWithItemIdentifier:%s];'%(dest,string(text(obj['NSToolbarItemIdentifier']))))
+            settings.append('[%s setLabel:%s]; [%s setTag:%d];'%(dest,string(text(obj['NSToolbarItemLabel'])),dest,obj.get('NSToolbarItemTag',0)))
+        elif bindings and kind=='NSToolbar':
+            source.append('%s=[[NSToolbar alloc] initWithIdentifier:%s];'%(dest,string(text(obj['NSToolbarIdentifier']))))
+            attach.append('[%s setItems:[NSArray arrayWithObjects:%s]];'%(dest,', '.join([ref(item) for item in array(obj.get('NSToolbarIBDefaultItems'))]+['nil'])))
         elif kind in views:
             if actual=='_NSCornerView':actual='NSView'
+            if bindings and actual=='NSComboBox':actual='TigerCompletingComboBox'
             frame=rect(obj.get('NSFrame'),obj.get('NSFrameSize'))
             if kind=='NSMatrix':
                 source.append('%s=[[NSMatrix alloc] initWithFrame:%s mode:NSRadioModeMatrix cellClass:[NSButtonCell class] numberOfRows:%d numberOfColumns:%d];'%(dest,frame,obj['NSNumRows'],obj['NSNumCols']))
@@ -105,12 +141,19 @@ def generate_keyed(path,name,standalone_menus=False):
                 if child:attach.append('[(NSBox *)%s setContentView:(NSView *)%s];'%(dest,ref(child)))
                 cell=deref(obj.get('NSTitleCell',{}))
                 settings.append('[%s setTitle:%s]; [%s setTitlePosition:%d]; [%s setBorderType:%d];'%(dest,string(text(cell.get('NSContents'))),dest,obj.get('NSTitlePosition',0),dest,obj.get('NSBorderType',0)))
+                if bindings and cls(cell.get('NSSupport'))=='NSFont':settings.append('[%s setTitleFont:%s];'%(dest,ref(cell['NSSupport'])))
             elif kind=='NSTabView':
                 for item in array(obj.get('NSTabViewItems')):attach.append('[%s addTabViewItem:%s];'%(dest,ref(item)))
-                settings.append('[%s setTabViewType:%d]; [%s selectTabViewItem:%s];'%(dest,obj.get('NSTvFlags',0)&7,dest,ref(obj.get('NSSelectedTabViewItem'))))
+                tab_type=obj.get('NSTvFlags',0)&7
+                if tab_types and i in tab_types: tab_type=tab_types[i]
+                settings.append('[%s setTabViewType:%d]; [%s selectTabViewItem:%s];'%(dest,tab_type,dest,ref(obj.get('NSSelectedTabViewItem'))))
+            elif bindings and kind=='NSBrowser':
+                for key,selector in [('NSMaxNumberOfVisibleColumns','setMaxVisibleColumns'),('NSMinColumnWidth','setMinColumnWidth')]:
+                    if key in obj:settings.append('[%s %s:%g];'%(dest,selector,obj[key]))
             elif kind=='NSScrollView':
                 attach.append('[(NSScrollView *)%s setContentView:(NSClipView *)%s];'%(dest,ref(obj.get('NSContentView'))))
                 settings.append('[%s setHasVerticalScroller:%d]; [%s setHasHorizontalScroller:%d];'%(dest,bool(obj.get('NSsFlags',0)&2),dest,bool(obj.get('NSsFlags',0)&1)))
+                if bindings:settings.append('[%s setBorderType:%d];'%(dest,(obj.get('NSsFlags',0)>>3)&3))
             elif kind=='NSClipView':
                 if obj.get('NSDocView'):attach.append('[%s setDocumentView:%s];'%(dest,ref(obj['NSDocView'])))
             elif kind=='NSTableView' or (kind=='NSClassSwapper' and 'NSTableColumns' in obj):
@@ -122,8 +165,18 @@ def generate_keyed(path,name,standalone_menus=False):
         elif kind in cells:
             if i in popup_cells:
                 attach.append('%s=[[o[%d] cell] retain];'%(dest,popup_cells[i])); continue
-            title=string(text(obj.get('NSContents')))
-            source.append('%s=[[NSClassFromString(%s) alloc] initTextCell:%s];'%(dest,string(kind),title))
+            title_text=text(obj.get('NSContents'))
+            if bindings and kind=='NSButtonCell':
+                # Native system fonts lack Cocoa's decorative cursor glyphs.
+                title_text=title_text.lstrip('\u258a\u2581\u2503 ')
+                normal=deref(obj.get('NSNormalImage',{}))
+                image_name=text(normal.get('NSResourceName')) if isinstance(normal,dict) else ''
+                title_text={'NSAdd':'+','NSAddTemplate':'+','buttonPlus':'+','NSRemove':'-','NSRemoveTemplate':'-','buttonMinus':'-'}.get(image_name,title_text)
+                if not title_text and obj.get('NSButtonFlags2')==33:
+                    title_text='?'
+            title=string(title_text)
+            source.append('%s=[[NSClassFromString(%s) alloc] initTextCell:%s];'%(dest,string(actual if bindings else kind),title))
+            if bindings: source.append('SnowInitializeNibCell(%s);'%dest)
             flags=obj.get('NSCellFlags',0)&0xffffffff
             if kind=='NSButtonCell':
                 images=[deref(obj.get(key,{})) for key in ('NSNormalImage','NSAlternateImage')]
@@ -155,6 +208,9 @@ def generate_keyed(path,name,standalone_menus=False):
         elif kind=='NSNumberFormatter':
             source.append('%s=[[NSNumberFormatter alloc] init];'%dest)
             settings.append('[%s setAllowsFloats:%d];'%(dest,obj.get('NS.allowsfloats',False)))
+            if bindings:
+                for key,selector in [('NS.positiveformat','setPositiveFormat'),('NS.negativeformat','setNegativeFormat')]:
+                    if key in obj:settings.append('[%s %s:%s];'%(dest,selector,string(text(obj[key]))))
         elif kind=='NSMenu':
             if i in popup_menus:
                 button='o[%d]'%popup_menus[i]
@@ -178,12 +234,19 @@ def generate_keyed(path,name,standalone_menus=False):
         item=deref(connector); kind=cls(item)
         source_ref=ref(item.get('NSSource')); target=ref(item.get('NSDestination')); label=text(item.get('NSLabel'))
         if kind=='NSNibOutletConnector':connections.append('TigerOutlet(%s,%s,%s);'%(source_ref,string(label)[1:],target))
-        elif kind=='NSNibControlConnector':connections.append('[%s setTarget:%s]; [%s setAction:sel_getUid(%s)];'%(source_ref,target,source_ref,string(label)[1:]))
+        elif kind=='NSNibControlConnector':connections.append('[%s setTarget:%s]; [%s setAction:sel_registerName(%s)];'%(source_ref,target,source_ref,string(label)[1:]))
         elif kind=='NSNibAXRelationshipConnector':connections.append('[%s accessibilitySetOverrideValue:%s forAttribute:%s];'%(source_ref,target,string(label)))
         elif kind=='NSNibAXAttributeConnector':
             connections.append('[%s accessibilitySetOverrideValue:%s forAttribute:%s];'%(ref(item.get('AXDestinationArchiveKey')),string(text(item.get('AXAttributeValueArchiveKey'))),string(text(item.get('AXAttributeTypeArchiveKey')))))
+        elif bindings and kind=='NSNibBindingConnector':
+            binding=text(item['NSBinding'])
+            priority=0 if binding=='contentArray' else (1 if binding=='content' else 2)
+            binding_connections.append((priority,'[%s bind:%s toObject:%s withKeyPath:%s options:%s];'%(source_ref,string(binding),target,string(text(item['NSKeyPath'])),literal(item.get('NSOptions')))))
+        elif bindings and kind=='NSIBHelpConnector':
+            pass # Native controls expose help through their existing target/action.
         else:raise ValueError('Unsupported keyed connector '+kind)
     source.extend(attach); source.extend(settings); source.extend(connections); source.extend(menu_roles)
+    source.extend(code for _,code in sorted(binding_connections,key=lambda item:item[0]))
     source.append('for(i=1;i<%d;i++) { for(j=1;j<i;j++) if(o[j]==o[i]) break; if(j==i && o[i] && (o[i]!=NSApp || owner==NSApp) && [o[i] respondsToSelector:@selector(awakeFromNib)]) [o[i] awakeFromNib]; }'%len(objects))
     source.append('return YES;\n}')
     return '\n'.join(source)

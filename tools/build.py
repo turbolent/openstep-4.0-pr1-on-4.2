@@ -1,4 +1,4 @@
-"""Build a supported PR1, Rhapsody DR2, or Tiger app for OPENSTEP 4.2 Intel."""
+"""Build a supported OPENSTEP, Rhapsody, or Mac OS X app for OPENSTEP 4.2 Intel."""
 
 import sys
 from pathlib import Path
@@ -18,6 +18,7 @@ def main():
         "workspace-dr2",
         "runtime-dr2",
         "terminal-tiger",
+        "terminal-snow-leopard",
     )
     if len(sys.argv) < 2 or sys.argv[1] not in targets:
         print(
@@ -42,6 +43,8 @@ def main():
         from tools.common.build_runtime_dr2 import main as build_main
     elif target == "terminal-tiger":
         from tools.TerminalTiger.build import main as build_main
+    elif target == "terminal-snow-leopard":
+        from tools.TerminalSnowLeopard.build import main as build_main
     else:
         from tools.StickiesDR2.build import main as build_main
     build_main()
