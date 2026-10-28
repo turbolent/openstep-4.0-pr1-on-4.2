@@ -3,7 +3,7 @@
 This builder runs stock Rhapsody DR2 apps with DR2's AppKit,
 Foundation, fonts, and private support services on OPENSTEP 4.2 for Intel.
 It patches user-supplied DR2 files and adds a compatibility library compiled from source.
-It builds separate Stickies, Viewer, MailViewer, and Project Builder variants named `*DR2Runtime.app`.
+It builds separate Stickies, Viewer, MailViewer, Project Builder, and Preview variants named `*DR2Runtime.app`.
 The existing `stickies-dr2`, `viewer-dr2`, and `mailviewer-dr2` builders continue to use OPENSTEP's frameworks.
 
 ## Usage
@@ -23,6 +23,7 @@ python3 -B tools/build.py runtime-dr2 \
   --app "$dr2/System/Library/CoreServices/Viewer.app" \
   --app "$dr2/System/Applications/MailViewer.app" \
   --app "$dr2/System/Developer/Applications/ProjectBuilder.app" \
+  --app "$dr2/System/Applications/Preview.app" \
   --output "$out/DR2Runtime" \
   --install-path "$runtime"
 ```

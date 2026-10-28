@@ -51,6 +51,7 @@ APP_HASHES = {
     "Viewer": "9400d39d055c6841af250f50b64193ea3d24629b712b88194da974a5b3b34790",
     "MailViewer": "ee3dc00e5d408484ffb7879449d3d2d554f1546f4a22e1ef99f24a03a8edcd90",
     "ProjectBuilder": "b6bf4b583373abefb54de1f451cb5cc27854ebf8aaa40513e2199ff899f7099f",
+    "Preview": "3ef93661e88f3999e6f55835f1d97fe345fa771c40daa7d7a86bcc362b8dff50",
 }
 VIEWER_PRIVATE_NAMES = {
     b"apps5_1.ppl": b"appsDRT.ppl",
