@@ -1,6 +1,7 @@
 /* Preference toolbar metadata; native tab buttons present its pane choices. */
 @interface NSToolbarItem : NSObject {
     NSString *snowIdentifier, *snowLabel;
+    NSImage *snowImage;
     id snowTarget;
     SEL snowAction;
     int snowTag;
@@ -29,6 +30,14 @@
 - (NSString *)paletteLabel {
     return snowLabel;
 }
+- (NSImage *)image {
+    return snowImage;
+}
+- (void)setImage:(NSImage *)image {
+    [image retain];
+    [snowImage release];
+    snowImage = image;
+}
 - (id)target {
     return snowTarget;
 }
@@ -56,6 +65,7 @@
 - (void)dealloc {
     [snowIdentifier release];
     [snowLabel release];
+    [snowImage release];
     [super dealloc];
 }
 @end

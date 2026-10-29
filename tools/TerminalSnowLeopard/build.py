@@ -94,6 +94,10 @@ def main():
     from PIL import Image
     with Image.open(contents/'Resources/Terminal.icns') as pixels:
         (app/'Resources/icon.tiff').write_bytes(native_icon(pixels))
+    # OPENSTEP expects associated alpha, including the Encodings toolbar image.
+    for name in ('Startup', 'WindowSettings', 'WindowGroups', 'Encodings'):
+        with Image.open(contents/'Resources'/(name+'.tiff')) as pixels:
+            (app/'Resources'/(name+'.tiff')).write_bytes(native_icon(pixels))
     for name in ('Info.plist', 'Info-nextstep.plist'):
         (app/'Resources'/name).write_text(openstep_plist(info)+'\n', encoding='ascii')
     executable = add_app_icon(executable, 'TerminalSnowLeopard', (app/'Resources/icon.tiff').read_bytes())

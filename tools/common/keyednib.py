@@ -116,6 +116,9 @@ def generate_keyed(path,name,standalone_menus=False,bindings=False,archive=None,
         elif bindings and kind=='NSToolbarItem':
             source.append('%s=[[NSToolbarItem alloc] initWithItemIdentifier:%s];'%(dest,string(text(obj['NSToolbarItemIdentifier']))))
             settings.append('[%s setLabel:%s]; [%s setTag:%d];'%(dest,string(text(obj['NSToolbarItemLabel'])),dest,obj.get('NSToolbarItemTag',0)))
+            image=deref(obj.get('NSToolbarItemImage',{}))
+            if cls(image)=='NSCustomResource' and text(image.get('NSClassName'))=='NSImage':
+                settings.append('[%s setImage:[[[NSImage alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:%s ofType:@"tiff"]] autorelease]];'%(dest,string(text(image['NSResourceName']))))
         elif bindings and kind=='NSToolbar':
             source.append('%s=[[NSToolbar alloc] initWithIdentifier:%s];'%(dest,string(text(obj['NSToolbarIdentifier']))))
             attach.append('[%s setItems:[NSArray arrayWithObjects:%s]];'%(dest,', '.join([ref(item) for item in array(obj.get('NSToolbarIBDefaultItems'))]+['nil'])))

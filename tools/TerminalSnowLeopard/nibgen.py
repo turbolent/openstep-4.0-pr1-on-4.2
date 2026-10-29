@@ -6,7 +6,7 @@ from tools.common.keyednib import generate_keyed, string
 
 
 def preferences_layout(path):
-    """Reserve room for native pane buttons without shrinking archived controls."""
+    """Reserve room for icon-and-label pane buttons above the archived controls."""
     archive = plistlib.loads(path.read_bytes())
     objects = archive['$objects']
     def deref(value):
@@ -21,10 +21,10 @@ def preferences_layout(path):
         cls = kind(obj)
         if cls == 'NSTabView' and obj.get('NSTvFlags', 0) & 7 == 6:
             x, y, width, height = values(obj['NSFrame'])
-            obj['NSFrame'] = '{{0, 0}, {%g, %g}}' % (width, height + 28)
+            obj['NSFrame'] = '{{0, 0}, {%g, %g}}' % (width, height + 64)
             tabs[i] = -1
     # The top-level tab archive extends twelve points below its Cocoa window.
-    # Native buttons require another twenty-eight points above its pane views.
+    # Icon-and-label buttons require another sixty-four points above its pane views.
     for obj in objects:
         if kind(obj) != 'NSWindowTemplate':
             continue
@@ -33,8 +33,8 @@ def preferences_layout(path):
         if not any(isinstance(child, plistlib.UID) and child.data in tabs for child in children):
             continue
         x, y, width, height = values(obj['NSWindowRect'])
-        obj['NSWindowRect'] = '{{%g, %g}, {%g, %g}}' % (x, y, width, height + 40)
-        root['NSFrameSize'] = '{%g, %g}' % (width, height + 40)
+        obj['NSWindowRect'] = '{{%g, %g}, {%g, %g}}' % (x, y, width, height + 76)
+        root['NSFrameSize'] = '{%g, %g}' % (width, height + 76)
     for obj in objects:
         if kind(obj) not in ('NSButton', 'NSPopUpButton') or 'NSFrame' not in obj:
             continue

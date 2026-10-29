@@ -901,6 +901,50 @@ static void snowUseSuperclassMethod(Class cls, const char *name) {
 @end
 static NSMutableDictionary *snowNativeTabTypes;
 @implementation NSTabView (SnowVisibleTabs)
+- (BOOL)snowShowsToolbar {
+    NSNumber *type = [snowNativeTabTypes objectForKey:[NSValue valueWithPointer:self]];
+    return type && [type intValue] == -1;
+}
+- (float)snowTabHeight {
+    return [self snowShowsToolbar] ? 64 : 28;
+}
+- (NSButtonCell *)snowButtonForTabAtIndex:(unsigned)index {
+    id item = [tigerTabs objectAtIndex:index];
+    NSButtonCell *button = [[[NSButtonCell alloc] initTextCell:[item label]] autorelease];
+    [button setButtonType:NSPushOnPushOffButton];
+    [button setFont:[NSFont systemFontOfSize:12]];
+    [button setState:item == tigerSelectedTab];
+    if ([self snowShowsToolbar]) {
+        NSArray *items = [[[self window] toolbar] items];
+        unsigned i;
+        for (i = 0; i < [items count]; i++) {
+            NSToolbarItem *toolbarItem = [items objectAtIndex:i];
+            if ([toolbarItem tag] == index) {
+                [button setTitle:[toolbarItem label]];
+                [button setImage:[toolbarItem image]];
+                [button setImagePosition:NSImageAbove];
+                break;
+            }
+        }
+    }
+    return button;
+}
+- (NSRect)snowRectForTabAtIndex:(unsigned)index {
+    NSRect bounds = [self bounds];
+    float height = [self snowTabHeight];
+    NSRect rect = NSMakeRect(bounds.origin.x, NSMaxY(bounds) - height, 0, height);
+    unsigned i;
+    if ([self snowShowsToolbar]) {
+        for (i = 0; i <= index; i++) {
+            rect.origin.x += rect.size.width;
+            rect.size.width = MAX(64, [[self snowButtonForTabAtIndex:i] cellSize].width + 16);
+        }
+    } else {
+        rect.size.width = bounds.size.width / [tigerTabs count];
+        rect.origin.x += index * rect.size.width;
+    }
+    return rect;
+}
 - (BOOL)snowShowsTabs {
     NSNumber *type = [snowNativeTabTypes objectForKey:[NSValue valueWithPointer:self]];
     return type && [type intValue] >= -1 && [type intValue] < 4;
@@ -915,7 +959,7 @@ static NSMutableDictionary *snowNativeTabTypes;
             rect.size.width -= 20;
             rect.size.height -= 10;
         }
-        rect.size.height -= 28;
+        rect.size.height -= [self snowTabHeight];
     }
     return rect;
 }
@@ -956,26 +1000,21 @@ static NSMutableDictionary *snowNativeTabTypes;
         return;
     NSDrawGrayBezel(bounds, dirty);
     for (i = 0; i < count; i++) {
-        NSRect rect = NSMakeRect(bounds.origin.x + i * bounds.size.width / count,
-                                 NSMaxY(bounds) - 28, bounds.size.width / count, 28);
-        id item = [tigerTabs objectAtIndex:i];
-        NSButtonCell *button = [[[NSButtonCell alloc] initTextCell:[item label]] autorelease];
-        [button setButtonType:NSPushOnPushOffButton];
-        [button setFont:[NSFont systemFontOfSize:12]];
-        [button setState:item == tigerSelectedTab];
+        NSRect rect = [self snowRectForTabAtIndex:i];
+        NSButtonCell *button = [self snowButtonForTabAtIndex:i];
         [button drawWithFrame:rect inView:self];
     }
 }
 - (void)mouseDown:(NSEvent *)event {
     NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
-    NSRect bounds = [self bounds];
-    if ([self snowShowsTabs] && point.y >= NSMaxY(bounds) - 28 && [tigerTabs count] &&
-        bounds.size.width > 0) {
-        unsigned index = (point.x - bounds.origin.x) * [tigerTabs count] / bounds.size.width;
-        if (index < [tigerTabs count])
-            [self selectTabViewItemAtIndex:index];
-    } else
-        [super mouseDown:event];
+    unsigned i;
+    if ([self snowShowsTabs])
+        for (i = 0; i < [tigerTabs count]; i++)
+            if (NSPointInRect(point, [self snowRectForTabAtIndex:i])) {
+                [self selectTabViewItemAtIndex:i];
+                return;
+            }
+    [super mouseDown:event];
 }
 @end
 static NSMutableDictionary *snowTabParents;
